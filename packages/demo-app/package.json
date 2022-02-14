@@ -49,9 +49,11 @@
     "webpack-dev-server": "3.10.3"
   },
   "dependencies": {
+    "@cclauson/tcbot-sequence-fluid": "^1.0.0",
     "@fluidframework/aqueduct": "^0.54.1",
     "@fluidframework/container-definitions": "^0.44.0",
     "@fluidframework/container-loader": "^0.54.1",
+    "@fluidframework/core-interfaces": "^0.42.0",
     "@fluidframework/local-driver": "^0.54.1",
     "@fluidframework/server-local-server": "^0.1034.0",
     "@fluidframework/view-interfaces": "^0.54.1",

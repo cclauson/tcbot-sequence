@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@cclauson/tcbot-sequence": "^1.0.0",
+    "@fluidframework/datastore-definitions": "^0.54.3",
     "@fluidframework/shared-object-base": "^0.54.3"
   }
 }
