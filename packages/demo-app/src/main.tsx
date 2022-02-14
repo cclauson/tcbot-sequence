@@ -1,34 +1,14 @@
+import { DataObjectTypes, IDataObjectProps } from "@fluidframework/aqueduct";
+import { IFluidModule } from "@fluidframework/container-definitions";
+import { IFluidHTMLView } from "@fluidframework/view-interfaces";
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
-import { Provider, useSelector } from "react-redux";
-import { createStore } from "redux";
-
-interface StoreType {
-    value: string;
-}
-
-function reducer(_state: StoreType, _action: any): StoreType {
-    return { value: 'foobarbaz' };
-}
-
-const store = createStore(reducer);
-
-function namedSelector(st: StoreType): string {
-    console.log('selector rerun');
-    return st.value;
-}
+import { LocalDriver } from "./LocalDriver";
+import { TextEditorComponent } from "./TextEditorComponent";
+import { TextEditorContainerRuntimeFactory } from "./TextEditorContainer";
 
 function App(): JSX.Element {
     const [count, setCount] = useState<number>(0);
-
-    const arrowFunctionSelector: (st: StoreType) => string = (st) => {
-        console.log('selector rerun');
-        return st.value;
-    }
-
-    const valFromRedux = useSelector<StoreType>(namedSelector, () => true);
-
-    console.log(`val from redux: ${valFromRedux}`);
 
     return <div>
         <text>Count: {count}</text>
@@ -37,9 +17,28 @@ function App(): JSX.Element {
     </div>
 }
 
+const localDriver = new LocalDriver({
+    load: () => Promise.resolve<IFluidModule>({ fluidExport: TextEditorContainerRuntimeFactory })
+});
+
+async function createTextEditorComponentInstance(): Promise<TextEditorComponent> {
+    const containerName = 'my-container';
+    const container = await localDriver.getLocalContainer(containerName, { package: 'text-component-container' });
+    return (await container.request({ url: '/' })).value as TextEditorComponent;
+}
+
 async function onLoad() {
-    const app = <Provider store={store}><App /></Provider>;
-    ReactDOM.render(app, document.getElementById("main-div"));
+    const mainDiv = document.getElementById("main-div");
+    const div1 = document.createElement('div');
+    mainDiv.appendChild(div1);
+    const hr = document.createElement('hr');
+    mainDiv.appendChild(hr);
+    const div2 = document.createElement('div');
+    mainDiv.appendChild(div2);
+    const textEditor1 = await createTextEditorComponentInstance();
+    textEditor1.render(div1);
+    const textEditor2 = await createTextEditorComponentInstance();
+    textEditor2.render(div2);
 }
 
 document.addEventListener('DOMContentLoaded', onLoad);
