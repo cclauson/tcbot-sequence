@@ -1,9 +1,8 @@
 {
-  "name": "@cclauson/tcbot-sequence",
+  "name": "@cclauson/tcbot-sequence-fluid",
   "version": "1.0.0",
   "description": "A shared sequence type based on a novel variation of operational transformation",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,5 +19,9 @@
   "homepage": "https://github.com/cclauson/tcbot-sequence#readme",
   "devDependencies": {
     "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "@cclauson/tcbot-sequence": "^1.0.0",
+    "@fluidframework/shared-object-base": "^0.54.3"
   }
 }
