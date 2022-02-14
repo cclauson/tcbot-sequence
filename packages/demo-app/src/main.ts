@@ -1,21 +1,7 @@
-import { DataObjectTypes, IDataObjectProps } from "@fluidframework/aqueduct";
 import { IFluidModule } from "@fluidframework/container-definitions";
-import { IFluidHTMLView } from "@fluidframework/view-interfaces";
-import React, { useState } from "react";
-import ReactDOM from "react-dom";
 import { LocalDriver } from "./LocalDriver";
 import { TextEditorComponent } from "./TextEditorComponent";
 import { TextEditorContainerRuntimeFactory } from "./TextEditorContainer";
-
-function App(): JSX.Element {
-    const [count, setCount] = useState<number>(0);
-
-    return <div>
-        <text>Count: {count}</text>
-        <div></div>
-        <button onClick={() => setCount(count => count + 1)}>Increment Counter</button>
-    </div>
-}
 
 const localDriver = new LocalDriver({
     load: () => Promise.resolve<IFluidModule>({ fluidExport: TextEditorContainerRuntimeFactory })
