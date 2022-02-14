@@ -1,0 +1,1 @@
+export const val: string = "The Exported Value!!!"

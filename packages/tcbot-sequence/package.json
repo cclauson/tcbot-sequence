@@ -1,0 +1,23 @@
+{
+  "name": "@cclauson/tcbot-sequence",
+  "version": "1.0.0",
+  "description": "A shared sequence type based on a novel variation of operational transformation",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cclauson/tcbot-sequence.git"
+  },
+  "author": "C. Clauson",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cclauson/tcbot-sequence/issues"
+  },
+  "homepage": "https://github.com/cclauson/tcbot-sequence#readme",
+  "devDependencies": {
+    "typescript": "^4.5.5"
+  }
+}
