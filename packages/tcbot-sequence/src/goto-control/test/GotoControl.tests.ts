@@ -63,4 +63,25 @@ describe('GOTO control algorithm', () => {
         expect(opResult.equals(op)).to.be.true;
         expect(opResult.numTimesTransformed()).to.equal(5);
     });
+
+    it('Log with interspersed concurrent and non-concurrent ops', () => {
+        const causallyPrecedingSet = new Set<TestRequest>();
+        const op1 = new TestRequest('op1', causallyPrecedingSet);
+        const op2 = new TestRequest('op2', causallyPrecedingSet);
+        causallyPrecedingSet.add(op2);
+        const op3 = new TestRequest('op3', causallyPrecedingSet);
+        const op4 = new TestRequest('op4', causallyPrecedingSet);
+        const op5 = new TestRequest('op5', causallyPrecedingSet);
+        causallyPrecedingSet.add(op5);
+        const newRequest = new TestRequest('new', causallyPrecedingSet);
+        const log = [op1, op2, op3, op4, op5];
+        const opResult = merge(log, newRequest);
+        const logSequenceExpected = ['op2', 'op5', 'op1', 'op3', 'op4'];
+        for (let i = 0; i < 5; ++i) {
+            expect(log[i].name).to.equal(logSequenceExpected[i]);
+        }
+        expect(log[0].operation.numTimesTransformed()).to.equal(1);
+        expect(log[1].operation.numTimesTransformed()).to.equal(3);
+        expect(opResult.numTimesTransformed()).to.equal(3);
+    });
 });
