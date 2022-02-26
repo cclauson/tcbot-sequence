@@ -1,4 +1,8 @@
-export function mergeEffectSequence<TSequenceElement>(sequence1: TSequenceElement[], sequence2: TSequenceElement[], comp: (sequenceElement1: TSequenceElement, sequenceElement2: TSequenceElement) => number): TSequenceElement[] {
+export function mergeEffectSequence<TSequenceElement>(
+    sequence1: TSequenceElement[],
+    sequence2: TSequenceElement[],
+    comp: (sequenceElement1: TSequenceElement, sequenceElement2: TSequenceElement) => number
+): TSequenceElement[] {
     if (sequence1.length === 0) {
         return [...sequence2];
     }

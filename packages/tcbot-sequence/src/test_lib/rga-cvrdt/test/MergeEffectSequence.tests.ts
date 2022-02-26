@@ -1,15 +1,11 @@
 import { expect } from "chai";
 import { mergeEffectSequence } from "../MergeEffectSequence";
+import { createCharacterComparatorFromOrder } from "./CreateCharacterComparaterFromOrder";
 
 describe('merge effect sequence', () => {
-    function createCharacterComparatorFromOrder(order: string): (char1: string, char2: string) => number {
-        return (char1: string, char2: string) => {
-            return order.indexOf(char1) - order.indexOf(char2);
-        }
-    }
-
     it('merges disjoint sequences according to expected order, two sequences', () => {
-        const result = mergeEffectSequence<string>(['a'], ['b'], createCharacterComparatorFromOrder('ab'));
+        const comp = createCharacterComparatorFromOrder('ab');
+        const result = mergeEffectSequence<string>(['a'], ['b'], comp);
         expect(result.join('')).equals('ab');
     });
 
