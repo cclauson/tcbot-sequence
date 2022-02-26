@@ -1,0 +1,5 @@
+{
+    "mochaExplorer.files": ["packages/*/dist/**/*.tests.js"],
+	"mochaExplorer.pruneFiles": true,
+	"mochaExplorer.timeout": 999999,
+}
