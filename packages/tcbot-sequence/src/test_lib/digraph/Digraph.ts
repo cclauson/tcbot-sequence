@@ -1,3 +1,5 @@
+import { Random } from "../random/Random";
+
 export class Digraph<TNode> {
     private readonly nodes: Set<TNode>;
     private forwardEdges: Map<TNode, Set<TNode>>;
@@ -136,4 +138,20 @@ export class Digraph<TNode> {
             }
         }
     }
+}
+
+export function randomMinimumDigraphFromSequence<TNode>(nodeSequence: TNode[], random: Random): Digraph<TNode> {
+    const digraph = new Digraph<TNode>();
+    for (let node of nodeSequence) {
+        digraph.addNode(node);
+    }
+    for (let i = 0; i < nodeSequence.length; ++i) {
+        for (let j = i + 1; j < nodeSequence.length; ++j) {
+            if (random.double() < 0.2) {
+                digraph.addEdge(nodeSequence[i], nodeSequence[j]);
+            }
+        }
+    }
+    digraph.transitiveReduce();
+    return digraph;
 }

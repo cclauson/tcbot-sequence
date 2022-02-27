@@ -15,4 +15,8 @@ export class Random {
     public int32(): number {
         return this.prng.int32();
     }
+
+    public double(): number {
+        return this.prng.double();
+    }
 }
