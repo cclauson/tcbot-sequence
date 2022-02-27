@@ -213,6 +213,35 @@ describe('Digraph', () => {
         expect(digraph.hasEdge('a', 'd')).to.be.false;
     });
 
+    it('transitive reduce with graph from wikipedia', () => {
+        const digraph = new Digraph();
+        digraph.addNode('a');
+        digraph.addNode('b');
+        digraph.addNode('c');
+        digraph.addNode('d');
+        digraph.addNode('e');
+        digraph.addEdge('a', 'b');
+        digraph.addEdge('a', 'c');
+        digraph.addEdge('a', 'd');
+        digraph.addEdge('a', 'e');
+        digraph.addEdge('b', 'd');
+        digraph.addEdge('c', 'd');
+        digraph.addEdge('c', 'e');
+        digraph.addEdge('d', 'e');
+
+        digraph.transitiveReduce();
+
+        expect(digraph.hasEdge('a', 'b'));
+        expect(digraph.hasEdge('a', 'c'));
+        expect(digraph.hasEdge('b', 'd'));
+        expect(digraph.hasEdge('c', 'd'));
+        expect(digraph.hasEdge('d', 'e'));
+
+        expect(digraph.hasEdge('a', 'd')).to.be.false;
+        expect(digraph.hasEdge('a', 'e')).to.be.false;
+        expect(digraph.hasEdge('c', 'e')).to.be.false;
+    });
+
     it('random minimal digraphs can be created, have orders consistent with provided sequence', () => {
         const intSequence = [];
         for (let i = 0; i < 20; ++i) {
