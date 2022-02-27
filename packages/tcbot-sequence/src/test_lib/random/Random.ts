@@ -19,4 +19,8 @@ export class Random {
     public double(): number {
         return this.prng.double();
     }
+
+    public integer(limit: number): number {
+        return Math.floor(this.prng.double() * limit);
+    }
 }
