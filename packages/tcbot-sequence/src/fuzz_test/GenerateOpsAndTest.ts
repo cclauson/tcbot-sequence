@@ -1,7 +1,7 @@
 import { Digraph, randomMinimumDigraphFromSequence } from "../test_lib/digraph/Digraph";
-import { PartialEffectRelation, SequenceVerificationResult } from "../test_lib/partial-effect-relation/PartialEffectRelation";
+import { PartialEffectRelation, SequenceLimit, SequenceVerificationResult } from "../test_lib/partial-effect-relation/PartialEffectRelation";
 import { Random } from "../test_lib/random/Random";
-import { applyUserOpToPartialEffectRelation, createRandomUserOperation, SequenceElementGenerator, UserOperation } from "./UserOperation";
+import { MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../test_lib/sequence-types/CoreTypes";
 
 interface OpNode<TOperation, TSequenceElement> {
     op: TOperation | undefined,
@@ -9,11 +9,6 @@ interface OpNode<TOperation, TSequenceElement> {
     sequenceAppliedTo: TSequenceElement[] | undefined,
     sequenceNumber: number
 };
-
-export interface MergableOpRequest<TOperation> {
-    op: TOperation,
-    causallyPrecedes(otherOpReq: MergableOpRequest<TOperation>): void;
-}
 
 class MergableOpRequestForOpNode<TOperation, TSequenceElement> implements MergableOpRequest<TOperation> {
     public readonly opNode: OpNode<TOperation, TSequenceElement>;
@@ -37,13 +32,14 @@ class MergableOpRequestForOpNode<TOperation, TSequenceElement> implements Mergab
     }
 }
 
+export interface SequenceElementGenerator<TSequenceElement> {
+    next(): TSequenceElement
+}
+
 export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSequenceElementIdentity>(
-    documentReadFunc: (document: TDocument) => TSequenceElement[],
-    operationFromUserOpAppliedToDoc: (userOperation: UserOperation<TSequenceElement>, document: TDocument) => TOperation,
-    mergeFunc: (ops: MergableOpRequest<TOperation>[]) => TDocument,
-    elementGenerator: SequenceElementGenerator<TSequenceElement>,
-    identityForSequenceElementFunc: (sequenceElement: TSequenceElement) => TSequenceElementIdentity,
-    sequenceElementStringificationFunc: (sequenceElement: TSequenceElement) => string,
+    sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
+    sequenceElementGenerator: SequenceElementGenerator<TSequenceElement>,
+    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, TDocument>,
     random: Random
 ): string | undefined {
     const opNodeList: OpNode<TOperation, TSequenceElement>[] = [];
@@ -64,7 +60,7 @@ export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSeq
         result: SequenceVerificationResult
     } {
         const partialEffectRelation = new PartialEffectRelation<TSequenceElement, TSequenceElementIdentity>(
-            identityForSequenceElementFunc, sequenceElementStringificationFunc);
+            sequenceElementType.identityForSequenceElementFunc, sequenceElementType.sequenceElementStringificationFunc);
 
         mergableOpSequence.forEach((mergableOp) => {
             const opNode = (mergableOp as MergableOpRequestForOpNode<TOperation, TSequenceElement>).opNode;
@@ -76,8 +72,8 @@ export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSeq
             applyUserOpToPartialEffectRelation<TSequenceElement, TSequenceElementIdentity>(
                 userOp, sequenceAppliedTo, partialEffectRelation);
         });
-        const doc = mergeFunc(mergableOpSequence);
-        const sequence = documentReadFunc(doc);
+        const doc = sequenceTypeImplementation.mergeFunc(mergableOpSequence);
+        const sequence = sequenceTypeImplementation.documentReadFunc(doc);
         const result = partialEffectRelation.verifySequence(sequence);
         return {
             sequence,
@@ -103,12 +99,56 @@ export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSeq
             return result.reason;
         }
 
-        const userOp = createRandomUserOperation(sequence, elementGenerator, random);
+        const userOp = createRandomUserOperation(sequence, sequenceElementGenerator, random);
 
         mergableOpFinal.opNode.userOp = userOp;
-        mergableOpFinal.opNode.op = operationFromUserOpAppliedToDoc(userOp, doc);
+        mergableOpFinal.opNode.op = sequenceTypeImplementation.operationFromUserOpAppliedToDoc(userOp, doc);
     }
 
     const { result } = verifyMergableOpSequence(mergableOps);
     return result.type === 'failure' ? result.reason : undefined;
+}
+
+export function applyUserOpToPartialEffectRelation<TSequenceElement, TSequenceElementIdentity>(
+    userOp: UserOperation<TSequenceElement>,
+    document: TSequenceElement[],
+    partialEffectRelation: PartialEffectRelation<TSequenceElement, TSequenceElementIdentity>
+): void {
+    if (userOp.type === 'insertion') {
+        const before = userOp.index === 0 ? SequenceLimit.Begin : document[userOp.index - 1];
+        const after = userOp.index === document.length ? SequenceLimit.End : document[userOp.index];
+        partialEffectRelation.insertSubsequence(userOp.content, before, after);
+    } else {
+        partialEffectRelation.deleteSequenceElements(document.slice(userOp.startIndex, userOp.endIndex));
+    }
+}
+
+export function createRandomUserOperation<TSequenceElement>(
+    document: TSequenceElement[],
+    elementGenerator: SequenceElementGenerator<TSequenceElement>,
+    random: Random
+): UserOperation<TSequenceElement> {
+    if (document.length > 0 && random.double() < 0.3) {
+        const i1 = random.integer(document.length + 1);
+        let i2: number;
+        do {
+            i2 = random.integer(document.length + 1);
+        } while (i1 === i2);
+
+        return {
+            type: 'deletion',
+            startIndex: Math.min(i1, i2),
+            endIndex: Math.max(i1, i2)
+        }
+    } else {
+        const content = [];
+        for (let i = 0; i < 3; ++i) {
+            content.push(elementGenerator.next());
+        }
+        return {
+            type: 'insertion',
+            content,
+            index: random.integer(document.length + 1)
+        }
+    }
 }

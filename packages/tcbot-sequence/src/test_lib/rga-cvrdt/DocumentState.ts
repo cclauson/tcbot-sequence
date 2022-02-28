@@ -49,3 +49,12 @@ export function mergeDocumentStates<TSequenceElement, TSequenceElementIdentity>(
         deleted: new Set([...documentState1.deleted, ...documentState2.deleted])
     };
 }
+
+const emptyDocumentI = {
+    effectSequence: [],
+    deleted: new Set()
+};
+
+export function emptyDocument<TSequenceElement, TSequenceElementIdentity>(): DocumentState<TSequenceElement, TSequenceElementIdentity> {
+    return emptyDocumentI as DocumentState<TSequenceElement, TSequenceElementIdentity>;
+};

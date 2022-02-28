@@ -77,14 +77,14 @@ describe('partial effect relation', () => {
         relation.deleteSequenceElements('stu'.split(''));
         relation.deleteSequenceElements('z'.split(''));
 
-        expect(relation.verifySequence('abvwxycd'.split(''))).to.equal('success');
-        expect(relation.verifySequence('abwvxycd'.split(''))).to.equal('success');
-        expect(relation.verifySequence('abwxvycd'.split(''))).to.equal('success');
-        expect(relation.verifySequence('abwxyvcd'.split(''))).to.equal('success');
+        expect(relation.verifySequence('abvwxycd'.split('')).type).to.equal('success');
+        expect(relation.verifySequence('abwvxycd'.split('')).type).to.equal('success');
+        expect(relation.verifySequence('abwxvycd'.split('')).type).to.equal('success');
+        expect(relation.verifySequence('abwxyvcd'.split('')).type).to.equal('success');
 
-        expect(relation.verifySequence('abvwxyc'.split(''))).to.equal('failure');
-        expect(relation.verifySequence('abwxycd'.split(''))).to.equal('failure');
-        expect(relation.verifySequence('avbwxycd'.split(''))).to.equal('failure');
-        expect(relation.verifySequence('abwxycvd'.split(''))).to.equal('failure');
+        expect(relation.verifySequence('abvwxyc'.split('')).type).to.equal('failure');
+        expect(relation.verifySequence('abwxycd'.split('')).type).to.equal('failure');
+        expect(relation.verifySequence('avbwxycd'.split('')).type).to.equal('failure');
+        expect(relation.verifySequence('abwxycvd'.split('')).type).to.equal('failure');
     });
 });
