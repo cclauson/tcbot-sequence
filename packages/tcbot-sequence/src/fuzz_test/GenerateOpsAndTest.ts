@@ -4,11 +4,15 @@ import { Random } from "../test_lib/random/Random";
 import { MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../test_lib/sequence-types/CoreTypes";
 
 interface OpNode<TOperation, TSequenceElement> {
-    op: TOperation | undefined,
-    userOp: UserOperation<TSequenceElement> | undefined,
-    sequenceAppliedTo: TSequenceElement[] | undefined,
-    sequenceNumber: number
+    sequenceNumber: number,
+    opInfo: OpInfo<TOperation, TSequenceElement> | undefined
 };
+
+interface OpInfo<TOperation, TSequenceElement> {
+    op: TOperation,
+    userOp: UserOperation<TSequenceElement>,
+    sequenceAppliedTo: TSequenceElement[],
+}
 
 class MergableOpRequestForOpNode<TOperation, TSequenceElement> implements MergableOpRequest<TOperation> {
     public readonly opNode: OpNode<TOperation, TSequenceElement>;
@@ -20,10 +24,10 @@ class MergableOpRequestForOpNode<TOperation, TSequenceElement> implements Mergab
     }
 
     get op(): TOperation {
-        if (!this.opNode.op) {
+        if (!this.opNode.opInfo) {
             throw new Error('op on opNode unexpectedly undefined');
         }
-        return this.opNode.op;
+        return this.opNode.opInfo.op;
     }
 
     public causallyPrecedes(otherOpReq: MergableOpRequest<TOperation>): boolean {
@@ -45,9 +49,7 @@ export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSeq
     const opNodeList: OpNode<TOperation, TSequenceElement>[] = [];
     for (let i = 0; i < 20; ++i) {
         opNodeList.push({
-            op: undefined,
-            userOp: undefined,
-            sequenceAppliedTo: undefined,
+            opInfo: undefined,
             sequenceNumber: i
         });
     }
@@ -64,11 +66,11 @@ export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSeq
 
         mergableOpSequence.forEach((mergableOp) => {
             const opNode = (mergableOp as MergableOpRequestForOpNode<TOperation, TSequenceElement>).opNode;
-            const userOp = opNode.userOp;
-            const sequenceAppliedTo = opNode.sequenceAppliedTo;
-            if (!userOp || !sequenceAppliedTo) {
+            if (!opNode.opInfo) {
                 throw new Error("unexpectedly couldn't find operation info on mergable op");
             }
+            const userOp = opNode.opInfo.userOp;
+            const sequenceAppliedTo = opNode.opInfo.sequenceAppliedTo;
             applyUserOpToPartialEffectRelation<TSequenceElement, TSequenceElementIdentity>(
                 userOp, sequenceAppliedTo, partialEffectRelation);
         });
@@ -101,8 +103,11 @@ export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSeq
 
         const userOp = createRandomUserOperation(sequence, sequenceElementGenerator, random);
 
-        mergableOpFinal.opNode.userOp = userOp;
-        mergableOpFinal.opNode.op = sequenceTypeImplementation.operationFromUserOpAppliedToDoc(userOp, doc);
+        mergableOpFinal.opNode.opInfo = {
+            userOp,
+            op: sequenceTypeImplementation.operationFromUserOpAppliedToDoc(userOp, doc),
+            sequenceAppliedTo: sequence
+        };
     }
 
     const { result } = verifyMergableOpSequence(mergableOps);
