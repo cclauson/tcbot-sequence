@@ -111,7 +111,7 @@ export class RangeableMap<TKey, TValue> {
     } {
         let ret = {
             newSubtree: subtree,
-            changed: false
+            changed: true
         };
         if (this.rangeableType.lessThan(key, subtree.lowest)) {
             if (this.rangeableType.immediatelyPrecedes(key, subtree.lowest)) {
@@ -143,7 +143,7 @@ export class RangeableMap<TKey, TValue> {
     } {
         let ret = {
             newSubtree: subtree,
-            changed: false
+            changed: true
         }
         if (this.rangeableType.lessThan(key, subtree.lowest) || this.rangeableType.lessThan(subtree.highest, key)) {
             throw new Error("key expected to be within bounds of subtree range, or equal to limit, but isn't");
@@ -158,7 +158,6 @@ export class RangeableMap<TKey, TValue> {
                 subtree.rightChild = newSubtree;
                 ret.changed = changed;
             } else {
-                ret.changed = true;
                 const immediatelySucceedsLeft = this.rangeableType.immediatelyPrecedes(subtree.leftChild.highest, key);
                 const immediatelyPrecedesRight = this.rangeableType.immediatelyPrecedes(key, subtree.rightChild.lowest);
                 if (immediatelySucceedsLeft) {

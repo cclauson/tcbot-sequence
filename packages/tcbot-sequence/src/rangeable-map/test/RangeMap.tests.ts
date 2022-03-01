@@ -11,7 +11,9 @@ describe('Range map', () => {
 
     it('adding a key-value pair allows it to be found later', () => {
         const map = new RangeableMap<number, string>(integerRangeable);
-        map.set(3, 'foo');
+        const changed = map.set(3, 'foo');
+
+        expect(changed).to.be.true;
         expect(map.has(3)).to.be.true;
  
         expect(map.has(2)).to.be.false;
@@ -31,8 +33,12 @@ describe('Range map', () => {
 
     it('single range can be created and extended', () => {
         const map = new RangeableMap<number, string>(integerRangeable);
-        map.set(3, 'foo');
-        map.set(4, 'bar');
+
+        let changed = map.set(3, 'foo');
+        expect(changed).to.be.true;
+
+        changed = map.set(4, 'bar');
+        expect(changed).to.be.true;
 
         expect(map.has(3)).to.be.true;
         expect(map.has(4)).to.be.true;
@@ -53,7 +59,8 @@ describe('Range map', () => {
         expect(range.values[0]).to.equal('foo');
         expect(range.values[1]).to.equal('bar');
 
-        map.set(2, 'baz');
+        changed = map.set(2, 'baz');
+        expect(changed).to.be.true;
 
         expect(map.has(2)).to.be.true;
         expect(map.has(3)).to.be.true;
