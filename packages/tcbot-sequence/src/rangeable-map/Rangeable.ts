@@ -9,4 +9,6 @@ export interface RangeableType<TRangeable> {
     // value to the next, which how subtraction is defined here.
     // If no such finite sequence of steps exist, this is expected to throw
     minus(val1: TRangeable, val2: TRangeable): number;
+    successorOf(val: TRangeable): TRangeable;
+    predecessorOf(val: TRangeable): TRangeable;
 }

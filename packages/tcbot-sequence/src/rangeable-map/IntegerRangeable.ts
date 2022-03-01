@@ -13,6 +13,12 @@ class IntegerRangeableI implements RangeableType<number> {
     public minus(val1: number, val2: number): number {
         return val1 - val2;
     }
+    public successorOf(val: number): number {
+        return val + 1;
+    }
+    public predecessorOf(val: number): number {
+        return val - 1;
+    }
 }
 
 export const integerRangeable: RangeableType<number> = new IntegerRangeableI();
