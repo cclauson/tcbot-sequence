@@ -1,7 +1,7 @@
 import { Digraph, randomMinimumDigraphFromSequence } from "../test_lib/digraph/Digraph";
 import { PartialEffectRelation, SequenceLimit, SequenceVerificationResult } from "../test_lib/partial-effect-relation/PartialEffectRelation";
 import { Random } from "../test_lib/random/Random";
-import { MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../test_lib/sequence-types/CoreTypes";
+import { InternalDocument, MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../test_lib/sequence-types/CoreTypes";
 
 interface OpNode<TOperation, TSequenceElement> {
     sequenceNumber: number,
@@ -40,10 +40,10 @@ export interface SequenceElementGenerator<TSequenceElement> {
     next(): TSequenceElement
 }
 
-export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSequenceElementIdentity>(
+export function generateOpsAndTest<TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>, TOperation, TSequenceElement, TSequenceElementIdentity>(
     sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
     sequenceElementGenerator: SequenceElementGenerator<TSequenceElement>,
-    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, TDocument>,
+    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, TInternalDocument>,
     random: Random
 ): string | undefined {
     const opNodeList: OpNode<TOperation, TSequenceElement>[] = [];
@@ -58,7 +58,7 @@ export function generateOpsAndTest<TDocument, TOperation, TSequenceElement, TSeq
 
     function verifyMergableOpSequence(mergableOpSequence: MergableOpRequest<TOperation>[]): {
         sequence: TSequenceElement[],
-        doc: TDocument,
+        doc: TInternalDocument,
         result: SequenceVerificationResult
     } {
         const partialEffectRelation = new PartialEffectRelation<TSequenceElement, TSequenceElementIdentity>(

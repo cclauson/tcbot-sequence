@@ -1,16 +1,16 @@
 import { Random } from "../test_lib/random/Random";
 import { CharSequence } from "../test_lib/sequence-types/CharSequence";
-import { SequenceElementType, SequenceTypeImplementation } from "../test_lib/sequence-types/CoreTypes";
+import { InternalDocument, SequenceElementType, SequenceTypeImplementation } from "../test_lib/sequence-types/CoreTypes";
 import { RgaCvrdt } from "../test_lib/sequence-types/RgaCvrdt";
 import { CharGenerator } from "./CharGenerator";
 import { generateOpsAndTest, SequenceElementGenerator } from "./GenerateOpsAndTest";
 
 runIterated(CharSequence, () => new CharGenerator(), new RgaCvrdt(CharSequence), 10000);
 
-function runIterated<TDocument, TOperation, TSequenceElement, TSequenceElementIdentity>(
+function runIterated<TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>, TOperation, TSequenceElement, TSequenceElementIdentity>(
     sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
     createNewSequenceElementGeneratorFn: () => SequenceElementGenerator<TSequenceElement>,
-    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, TDocument>,
+    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, TInternalDocument>,
     numRuns: number,
     seed?: string
 ) {

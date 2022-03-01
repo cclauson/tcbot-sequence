@@ -3,10 +3,16 @@ export interface SequenceElementType<TSequenceElement, TSequenceElementIdentity>
     sequenceElementStringificationFunc: (sequenceElement: TSequenceElement) => string
 }
 
-export interface SequenceTypeImplementation<TSequenceElement, TOperation, TDocument> {
-    documentReadFunc: (document: TDocument) => TSequenceElement[],
-    operationFromUserOpAppliedToDoc: (userOperation: UserOperation<TSequenceElement>, document: TDocument) => TOperation,
-    mergeFunc: (ops: MergableOpRequest<TOperation>[]) => TDocument
+export interface InternalDocument<TSequenceElement, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>> {
+    // TODO: Uncomment, implement
+    // read(): TSequenceElement[]
+    // equals(other: TInternalDocument): boolean
+}
+
+export interface SequenceTypeImplementation<TSequenceElement, TOperation, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>> {
+    documentReadFunc: (document: TInternalDocument) => TSequenceElement[],
+    operationFromUserOpAppliedToDoc: (userOperation: UserOperation<TSequenceElement>, document: TInternalDocument) => TOperation,
+    mergeFunc: (ops: MergableOpRequest<TOperation>[]) => TInternalDocument
 }
 
 export interface MergableOpRequest<TOperation> {

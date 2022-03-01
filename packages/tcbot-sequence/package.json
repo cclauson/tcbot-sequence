@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "test": "ts-mocha **/*.tests.ts --reporter spec",
-    "fuzz-test": "ts-node src/fuzz_test/main.ts"
+    "fuzz-test": "ts-node src/fuzz-test/main.ts"
   },
   "repository": {
     "type": "git",

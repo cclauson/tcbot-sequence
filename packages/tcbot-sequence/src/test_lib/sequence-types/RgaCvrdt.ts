@@ -1,9 +1,9 @@
-import { DocumentState as RgaCvrdtDocumentState, emptyDocument, mergeDocumentStates, readDocumentState } from "../rga-cvrdt/DocumentState";
+import { DocumentState, emptyDocument, mergeDocumentStates, readDocumentState } from "../rga-cvrdt/DocumentState";
 import { MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "./CoreTypes";
 
 interface RgaCvrdtInsertionOp<TSequenceElement, TSequenceElementIdentity> {
     type: 'insertion',
-    document: RgaCvrdtDocumentState<TSequenceElement, TSequenceElementIdentity>,
+    document: DocumentState<TSequenceElement, TSequenceElementIdentity>,
     inserted: Set<TSequenceElementIdentity>
 }
 
@@ -16,7 +16,7 @@ export type RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity> = RgaCvrdtIns
     | RgaCvrdtDeletionOp<TSequenceElementIdentity>;
 
 export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity> implements
-    SequenceTypeImplementation<TSequenceElement, RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity>, RgaCvrdtDocumentState<TSequenceElement, TSequenceElementIdentity>> {
+    SequenceTypeImplementation<TSequenceElement, RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity>, DocumentState<TSequenceElement, TSequenceElementIdentity>> {
 
     private readonly sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>;
 
@@ -24,11 +24,11 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity> implements
         this.sequenceElementType = sequenceElementType;
     }
     
-    public documentReadFunc(document: RgaCvrdtDocumentState<TSequenceElement, TSequenceElementIdentity>): TSequenceElement[] {
+    public documentReadFunc(document: DocumentState<TSequenceElement, TSequenceElementIdentity>): TSequenceElement[] {
         return readDocumentState(document, this.sequenceElementType.identityForSequenceElementFunc);
     }
 
-    public operationFromUserOpAppliedToDoc(userOperation: UserOperation<TSequenceElement>, document: RgaCvrdtDocumentState<TSequenceElement, TSequenceElementIdentity>): RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity> {
+    public operationFromUserOpAppliedToDoc(userOperation: UserOperation<TSequenceElement>, document: DocumentState<TSequenceElement, TSequenceElementIdentity>): RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity> {
         const readResult = this.documentReadFunc(document);
         if (userOperation.type === 'insertion') {
             const effectSequence: TSequenceElement[] = [];
@@ -39,7 +39,7 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity> implements
             if (userOperation.index !== readResult.length) {
                 effectSequence.push(readResult[userOperation.index]);
             }
-            const insertionDoc: RgaCvrdtDocumentState<TSequenceElement, TSequenceElementIdentity> = {
+            const insertionDoc: DocumentState<TSequenceElement, TSequenceElementIdentity> = {
                 effectSequence,
                 deleted: new Set<TSequenceElementIdentity>()
             };
@@ -63,8 +63,8 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity> implements
     // supplement a document with additional content in the form of a document, where all new content which is distict
     // from that already in the document succeeds that in the document in tiebreaking order
     private addTiebreakingSucceedingContentViaDocumentMerge(
-        doc: RgaCvrdtDocumentState<TSequenceElement, TSequenceElementIdentity>,
-        newContent: RgaCvrdtDocumentState<TSequenceElement, TSequenceElementIdentity>,
+        doc: DocumentState<TSequenceElement, TSequenceElementIdentity>,
+        newContent: DocumentState<TSequenceElement, TSequenceElementIdentity>,
         insertedIdentities: Set<TSequenceElementIdentity>
     ) {
         const compareWithinSequence = (seqElId1: TSequenceElementIdentity, seqElId2: TSequenceElementIdentity, seq: TSequenceElement[]) => {
@@ -96,7 +96,7 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity> implements
         })
     }
 
-    public mergeFunc(ops: MergableOpRequest<RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity>>[]): RgaCvrdtDocumentState<TSequenceElement, TSequenceElementIdentity> {
+    public mergeFunc(ops: MergableOpRequest<RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity>>[]): DocumentState<TSequenceElement, TSequenceElementIdentity> {
         let document = emptyDocument<TSequenceElement, TSequenceElementIdentity>();
         for(let mergableOp of ops) {
             const op = mergableOp.op;
