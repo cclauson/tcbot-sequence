@@ -233,4 +233,46 @@ describe('Range map', () => {
 
         expect([...map.iterateRanges()].length).to.equal(0);
     });
+
+    it('deletion of various keys across three sequences', () => {
+        const map = new RangeableMap<number, string>(integerRangeable);
+        map.set(1, 'a');
+        map.set(3, 'c');
+        map.set(5, 'e');
+
+        map.set(7, 'f');
+        map.set(9, 'h');
+        map.set(11, 'j');
+
+        map.set(13, 'k');
+        map.set(15, 'm');
+        map.set(17, 'o');
+
+        map.set(2, 'b');
+        map.set(4, 'd');
+
+        map.set(8, 'g');
+        map.set(10, 'i');
+
+        map.set(14, 'l');
+        map.set(16, 'n');
+
+        map.delete(1);
+        map.delete(9);
+        map.delete(17);
+
+        expect([...map.iterateRanges()].length).to.equal(4);
+
+        map.delete(3);
+        map.delete(11);
+        map.delete(13);
+
+        expect([...map.iterateRanges()].length).to.equal(5);
+
+        map.delete(5);
+        map.delete(7);
+        map.delete(15);
+
+        expect([...map.iterateRanges()].length).to.equal(6);
+    });
 });
