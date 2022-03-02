@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "ts-mocha **/*.tests.ts --reporter spec",
+    "test": "ts-mocha **/*.test.ts --reporter spec",
     "fuzz-test": "ts-node src/fuzz-test/main.ts"
   },
   "repository": {

@@ -183,6 +183,8 @@ export class RangeableMap<TKey, TValue> {
                 if (curr.type === 'leaf') {
                     break;
                 } else {
+                    grandparent = parent;
+                    parent = curr;
                     if (!this.rangeableType.lessThan(key, curr.rightChild.lowest)) {
                         curr = curr.rightChild;
                     } else if (!this.rangeableType.lessThan(curr.leftChild.highest, key)) {

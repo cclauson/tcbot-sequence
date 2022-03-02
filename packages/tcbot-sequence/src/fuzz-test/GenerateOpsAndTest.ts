@@ -1,7 +1,7 @@
-import { Digraph, randomMinimumDigraphFromSequence } from "../test_lib/digraph/Digraph";
-import { PartialEffectRelation, SequenceLimit, SequenceVerificationResult } from "../test_lib/partial-effect-relation/PartialEffectRelation";
-import { Random } from "../test_lib/random/Random";
-import { InternalDocument, MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../test_lib/sequence-types/CoreTypes";
+import { Digraph, randomMinimumDigraphFromSequence } from "../test-lib/digraph/Digraph";
+import { PartialEffectRelation, SequenceLimit, SequenceVerificationResult } from "../test-lib/partial-effect-relation/PartialEffectRelation";
+import { Random } from "../test-lib/random/Random";
+import { InternalDocument, MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../test-lib/sequence-types/CoreTypes";
 
 interface OpNode<TOperation, TSequenceElement> {
     sequenceNumber: number,

@@ -1,7 +1,7 @@
-import { Random } from "../test_lib/random/Random";
-import { CharSequence } from "../test_lib/sequence-types/CharSequence";
-import { InternalDocument, SequenceElementType, SequenceTypeImplementation } from "../test_lib/sequence-types/CoreTypes";
-import { RgaCvrdt } from "../test_lib/sequence-types/RgaCvrdt";
+import { Random } from "../test-lib/random/Random";
+import { CharSequence } from "../test-lib/sequence-types/CharSequence";
+import { InternalDocument, SequenceElementType, SequenceTypeImplementation } from "../test-lib/sequence-types/CoreTypes";
+import { RgaCvrdt } from "../test-lib/sequence-types/RgaCvrdt";
 import { CharGenerator } from "./CharGenerator";
 import { generateOpsAndTest, SequenceElementGenerator } from "./GenerateOpsAndTest";
 
