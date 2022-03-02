@@ -371,4 +371,33 @@ export class RangeableMap<TKey, TValue> {
         };
     }
 
+    public stringify(keyToStringFunc: (key: TKey) => string, valArrayToStringFunc: (values: TValue[]) => string): string {
+        if (!this.root) {
+            return '(empty)';
+        }
+        return this.stringifyNode(this.root, 0, keyToStringFunc, valArrayToStringFunc);
+    }
+
+    private stringifyNode(
+        node: RangeableMapNode<TKey, TValue>,
+        indent: number,
+        keyToStringFunc: (key: TKey) => string,
+        valArrayToStringFunc: (values: TValue[]) => string
+    ): string {
+        if (node.type === 'leaf') {
+            let buffer = '';
+            for (let i = 0; i < indent; ++i) {
+                buffer += '  ';
+            }
+            const valsAsString = valArrayToStringFunc(node.values);
+            if (this.rangeableType.equal(node.lowest, node.highest)) {
+                return buffer + `${node.lowest} => ${valsAsString}\n`;
+            } else {
+                return buffer + `[${node.lowest}, ${node.highest}] => ${valsAsString}\n`;
+            }
+        } else {
+            return this.stringifyNode(node.leftChild, indent + 1, keyToStringFunc, valArrayToStringFunc)
+            + this.stringifyNode(node.rightChild, indent + 1, keyToStringFunc, valArrayToStringFunc);
+        }
+    }
 }
