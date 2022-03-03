@@ -34,116 +34,165 @@ export class RangeableMap<TKey, TValue> {
         if (this.root) {
             const { newSubtree, changed } = this.setInSubtreeUnconstrained(key, value, this.root);
             this.root = newSubtree;
+            this.checkRep();
             return changed;
         } else {
             this.root = this.createLeafNodeForKeyValue(key, value);
+            this.checkRep();
             return true;
         }
     }
 
     public has(key: TKey): boolean {
         const { leaf: leafWithKey } = this.leafWithKeyIfExists(key);
+        this.checkRep();
         return leafWithKey !== undefined;
     }
 
     public get(key: TKey): TValue | undefined {
         const { leaf: leafWithKey } = this.leafWithKeyIfExists(key);
         if (!leafWithKey) {
+            this.checkRep();
             return undefined;
         }
         const index = this.rangeableType.minus(key, leafWithKey.lowest);
         if (index < 0 || index >= leafWithKey.values.length) {
             throw new Error('subtraction between key and lower bound produced unexpected result');
         }
+        this.checkRep();
         return leafWithKey.values[index];
     }
 
     public delete(key: TKey): TValue | undefined {
-        const { leaf, parent, grandparent } = this.leafWithKeyIfExists(key);
-        if (!leaf) {
+        if (!this.root) {
             return undefined;
-        } else if (this.rangeableType.equal(leaf.lowest, leaf.highest)) {
-            // remove leaf from tree
-            if (!this.rangeableType.equal(key, leaf.lowest) || !this.rangeableType.equal(key, leaf.highest)) {
-                throw new Error('Unexpectedly found that key found in range of length 1 is not equal to bounds');
-            }
-            if (leaf.values.length !== 1) {
-                throw new Error('Unexpectedly found that upper and lower limits were equal, but value array not length 1');                
-            }
-            if (!parent) {
-                if (this.root !== leaf) {
-                    throw new Error('Unexpectedly found that leaf without parent is not root');                
-                }
-                this.root = undefined;
-            } else {
-                let leafSibling: RangeableMapNode<TKey, TValue>;
-                if (parent.rightChild === leaf) {
-                    leafSibling = parent.leftChild;
-                } else if (parent.leftChild === leaf) {
-                    leafSibling = parent.rightChild;
-                } else {
-                    throw new Error('node unexpectedly not found as either left or right child of parent');
-                }
-                if (!grandparent) {
-                    if (this.root !== parent) {
-                        throw new Error('Unexpectedly found that node without parent is not root');
-                    }
-                    this.root = leafSibling;
-                } else {
-                    if (grandparent.rightChild === parent) {
-                        grandparent.rightChild = leafSibling;
-                    } else if (grandparent.leftChild === parent) {
-                        grandparent.leftChild = leafSibling;
+        }
+        const deleteResult = this.deleteFromSubtreeUnconstrained(key, this.root);
+        if (!deleteResult) {
+            this.checkRep();
+            return undefined;
+        }
+        this.root = deleteResult.newSubtree;
+        this.checkRep();
+        return deleteResult.value;
+    }
+
+    private deleteFromSubtreeUnconstrained(key: TKey, subtree: RangeableMapNode<TKey, TValue>): { 
+        value: TValue,
+        newSubtree: RangeableMapNode<TKey, TValue> | undefined
+    } | undefined {
+        if (this.rangeableType.lessThan(key, subtree.lowest) || this.rangeableType.lessThan(subtree.highest, key)) {
+            return undefined;
+        }
+        return this.deleteFromSubtree(key, subtree);
+    }
+
+    private deleteFromSubtree(key: TKey, subtree: RangeableMapNode<TKey, TValue>): { 
+        value: TValue,
+        newSubtree: RangeableMapNode<TKey, TValue> | undefined
+    } | undefined {
+        if (this.rangeableType.lessThan(key, subtree.lowest) || this.rangeableType.lessThan(subtree.highest, key)) {
+            throw new Error('key unexpectedly out of range of subtree');
+        }
+        if (subtree.type === 'branch') {
+            let deletionResult: ReturnType<typeof this.deleteFromSubtree>;
+            if (!this.rangeableType.lessThan(subtree.leftChild.highest, key)) {
+                deletionResult = this.deleteFromSubtree(key, subtree.leftChild);
+                if (deletionResult) {
+                    if (deletionResult.newSubtree) {
+                        subtree.leftChild = deletionResult.newSubtree;
+                        deletionResult.newSubtree = subtree;
                     } else {
-                        throw new Error('parent unexpectedly found as neither left or right child of grandparent');
+                        deletionResult.newSubtree = subtree.rightChild;
                     }
                 }
-            }
-            return leaf.values[0];
-        } else if (this.rangeableType.equal(leaf.lowest, key)) {
-            // remove/return first member of range
-            const val = leaf.values.shift();
-            leaf.lowest = this.rangeableType.successorOf(leaf.lowest);
-            return val;
-        } else if (this.rangeableType.equal(leaf.highest, key)) {
-            // remove/return last member of range
-            const val = leaf.values.pop();
-            leaf.highest = this.rangeableType.predecessorOf(leaf.highest);
-            return val;
-        } else {
-            // split into two
-            const splitIndex = this.rangeableType.minus(key, leaf.lowest);
-            if (splitIndex <= 0 || splitIndex >= leaf.values.length - 1) {
-                throw new Error('unexpected splitIndex value');
-            }
-            const newLeft: RangeableMapLeafNode<TKey, TValue> = {
-                type: 'leaf',
-                lowest: leaf.lowest,
-                highest: this.rangeableType.predecessorOf(key),
-                values: leaf.values.slice(0, splitIndex)
-            };
-            const newRight: RangeableMapLeafNode<TKey, TValue> = {
-                type: 'leaf',
-                lowest: this.rangeableType.successorOf(key),
-                highest: leaf.highest,
-                values: leaf.values.slice(splitIndex + 1, leaf.values.length)
-            };
-            const newBranch = this.createBranchNode(newLeft, newRight);
-            if (!parent) {
-                if (this.root !== leaf) {
-                    throw new Error('Unexpectedly found that leaf without parent is not root');                
+            } else if (!this.rangeableType.lessThan(key, subtree.rightChild.lowest)) {
+                deletionResult = this.deleteFromSubtree(key, subtree.rightChild);
+                if (deletionResult) {
+                    if (deletionResult.newSubtree) {
+                        subtree.rightChild = deletionResult.newSubtree;
+                        deletionResult.newSubtree = subtree;
+                    } else {
+                        deletionResult.newSubtree = subtree.leftChild;
+                    }
                 }
-                this.root = newBranch;
             } else {
-                if (parent.rightChild === leaf) {
-                    parent.rightChild = newBranch;
-                } else if (parent.leftChild === leaf) {
-                    parent.leftChild = newBranch;
-                } else {
-                    throw new Error('node unexpectedly not found as either left or right child of parent');
+                return undefined;
+            }
+            if (!deletionResult) {
+                return undefined;
+            }
+            subtree.lowest = subtree.leftChild.lowest;
+            subtree.highest = subtree.rightChild.highest;
+            return deletionResult;
+        } else {
+            if (this.rangeableType.equal(subtree.lowest, subtree.highest)) {
+                if (!this.rangeableType.equal(subtree.lowest, key) || !this.rangeableType.equal(subtree.highest, key)) {
+                    throw new Error('expected key bounded above and below by same value is not equal to both');
+                }
+                if (subtree.values.length !== 1) {
+                    throw new Error('values array unexpectedly not of length one');
+                }
+                return {
+                    value: subtree.values[0],
+                    newSubtree: undefined
+                };
+            } else if (this.rangeableType.equal(subtree.lowest, key)) {
+                subtree.lowest = this.rangeableType.successorOf(key);
+                const value = subtree.values.shift();
+                if (!value) {
+                    throw new Error('values array unexpectedly empty');
+                }
+                return {
+                    value,
+                    newSubtree: subtree
+                }
+            } else if (this.rangeableType.equal(subtree.highest, key)) {
+                subtree.highest = this.rangeableType.predecessorOf(key);
+                const value = subtree.values.pop();
+                if (!value) {
+                    throw new Error('values array unexpectedly empty');
+                }
+                return {
+                    value,
+                    newSubtree: subtree
+                }
+            } else {
+                // split into two
+                const splitIndex = this.rangeableType.minus(key, subtree.lowest);
+                if (splitIndex <= 0 || splitIndex >= subtree.values.length - 1) {
+                    throw new Error('unexpected splitIndex value');
+                }
+                const newLeft: RangeableMapLeafNode<TKey, TValue> = {
+                    type: 'leaf',
+                    lowest: subtree.lowest,
+                    highest: this.rangeableType.predecessorOf(key),
+                    values: subtree.values.slice(0, splitIndex)
+                };
+                if (this.rangeableType.lessThan(newLeft.highest, newLeft.lowest)) {
+                    throw new Error('highest bound expectedly less than lowest bound in newLeft');
+                }
+                const newRight: RangeableMapLeafNode<TKey, TValue> = {
+                    type: 'leaf',
+                    lowest: this.rangeableType.successorOf(key),
+                    highest: subtree.highest,
+                    values: subtree.values.slice(splitIndex + 1, subtree.values.length)
+                };
+                if (this.rangeableType.lessThan(newRight.highest, newRight.lowest)) {
+                    throw new Error('highest bound expectedly less than lowest bound in newRight');
+                }
+                if (!this.rangeableType.lessThan(newLeft.highest, newRight.lowest)) {
+                    throw new Error('newLeft.highest expected to be less than newRight.lowest');
+                }
+                if (this.rangeableType.immediatelyPrecedes(newLeft.highest, newRight.lowest)) {
+                    throw new Error('newLeft.highest unexpectedly immediate predecessor to newRight.lowest');
+                }
+                const newBranch = this.createBranchNode(newLeft, newRight);
+                return {
+                    value: subtree.values[splitIndex],
+                    newSubtree: newBranch
                 }
             }
-            return leaf.values[splitIndex];
         }
     }
 
@@ -252,16 +301,21 @@ export class RangeableMap<TKey, TValue> {
                 const { newSubtree, changed } = this.setInSubtree(key, value, subtree.leftChild);;
                 subtree.leftChild = newSubtree;
                 ret.changed = changed;
+                subtree.lowest = subtree.leftChild.lowest;
+                subtree.highest = subtree.rightChild.highest;    
             } else if (!this.rangeableType.lessThan(key, subtree.rightChild.lowest)) {
                 const { newSubtree, changed } = this.setInSubtree(key, value, subtree.rightChild);
                 subtree.rightChild = newSubtree;
                 ret.changed = changed;
+                subtree.lowest = subtree.leftChild.lowest;
+                subtree.highest = subtree.rightChild.highest;    
             } else {
                 const immediatelySucceedsLeft = this.rangeableType.immediatelyPrecedes(subtree.leftChild.highest, key);
                 const immediatelyPrecedesRight = this.rangeableType.immediatelyPrecedes(key, subtree.rightChild.lowest);
                 if (immediatelySucceedsLeft) {
                     if (immediatelyPrecedesRight) {
                         const { newSubtree: newRightChild, values, highestKeyRemoved } = this.removeLeftmostRangeFromSubtree(subtree.rightChild);
+                        this.checkRepSubtree(subtree);
                         const valuesToExtendWith = [value, ...values];
                         this.extendSubtreeRightWith(highestKeyRemoved, valuesToExtendWith, subtree.leftChild);
                         if (newRightChild) {
@@ -297,6 +351,7 @@ export class RangeableMap<TKey, TValue> {
     } {
         if (subtree.type === 'branch') {
             const { newSubtree: newLeftChild, values, highestKeyRemoved } = this.removeLeftmostRangeFromSubtree(subtree.leftChild);
+            subtree.lowest = subtree.leftChild.lowest;
             let newSubtree;
             if (newLeftChild) {
                 subtree.leftChild = newLeftChild;
@@ -398,6 +453,26 @@ export class RangeableMap<TKey, TValue> {
         } else {
             return this.stringifyNode(node.leftChild, indent + 1, keyToStringFunc, valArrayToStringFunc)
             + this.stringifyNode(node.rightChild, indent + 1, keyToStringFunc, valArrayToStringFunc);
+        }
+    }
+
+    private checkRep(): void {
+        if (!this.root) {
+            return;
+        }
+        this.checkRepSubtree(this.root);
+    }
+
+    private checkRepSubtree(subtree: RangeableMapNode<TKey, TValue>): void {
+        if (subtree.type === 'branch') {
+            if (!this.rangeableType.equal(subtree.lowest, subtree.leftChild.lowest)) {
+                throw new Error("branch node's lowest not equal to left child's lowest");
+            }
+            if (!this.rangeableType.equal(subtree.highest, subtree.rightChild.highest)) {
+                throw new Error("branch node's highest not equal to right child's highest");
+            }
+            this.checkRepSubtree(subtree.leftChild);
+            this.checkRepSubtree(subtree.rightChild);
         }
     }
 }
