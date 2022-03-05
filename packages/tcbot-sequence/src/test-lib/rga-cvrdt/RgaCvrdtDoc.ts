@@ -48,7 +48,31 @@ export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceEl
     }
 
     public equals(other: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>): boolean {
-        throw new Error("Method not implemented.");
+        if (this.effectSequence.length !== other.effectSequence.length) {
+            return false;
+        }
+        if (this.deleted.size !== other.deleted.size) {
+            return false;
+        }
+        for (let i = 0; i < this.effectSequence.length; ++i) {
+            const ese1 = this.effectSequence[i];
+            const ese2 = other.effectSequence[i];
+            if (this.sequenceElementOrderCompFn(ese1.order, ese2.order) !== 0) {
+                return false;
+            }
+            if (this.sequenceElementType.identityForSequenceElementFunc(ese1.sequenceElement)
+                !== this.sequenceElementType.identityForSequenceElementFunc(ese2.sequenceElement)) {
+                return false;
+            }
+        }
+        const otherDeletedCopy = new Set<TSequenceElementIdentity>(other.deleted);
+        for (let sequenceElementId of this.deleted) {
+            if (!otherDeletedCopy.has(sequenceElementId)) {
+                return false;
+            }
+            otherDeletedCopy.delete(sequenceElementId);
+        }
+        return otherDeletedCopy.size === 0;
     }
 
     public applyOpWithOrder(operation: RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, order: TSequenceElementOrder): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> {

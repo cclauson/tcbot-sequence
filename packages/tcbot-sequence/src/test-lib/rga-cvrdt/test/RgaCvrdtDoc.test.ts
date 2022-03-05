@@ -109,4 +109,105 @@ describe('RgaCvrdt doc', () => {
         const merged = merged1.merge(document3);
         expect(merged.read().join('')).equals('axyc');
     });
+
+    it('empty documents are equal', () => {
+        const document1 = new RgaCvrdtDoc<string, string, number>(
+            [],
+            new Set<string>(),
+            charSequence,
+            compareNumbers
+        );
+        const document2 = new RgaCvrdtDoc<string, string, number>(
+            [],
+            new Set<string>(),
+            charSequence,
+            compareNumbers
+        );
+        expect(document1.equals(document2));
+    });
+
+    it('empty document not equal to non-empty document', () => {
+        const document1 = new RgaCvrdtDoc<string, string, number>(
+            [],
+            new Set<string>(),
+            charSequence,
+            compareNumbers
+        );
+        const document2 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('a', 0),
+            new Set<string>(),
+            charSequence,
+            compareNumbers
+        );
+        expect(document1.equals(document2)).to.be.false;
+        expect(document2.equals(document1)).to.be.false;
+    });
+
+    it('simple, 3 letter documents equal', () => {
+        const document1 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('abc', 0),
+            new Set<string>(),
+            charSequence,
+            compareNumbers
+        );
+        const document2 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('abc', 0),
+            new Set<string>(),
+            charSequence,
+            compareNumbers
+        );
+        expect(document1.equals(document2));
+        expect(document2.equals(document1));
+    });
+
+    it('deletion of content causes documents to be non equal', () => {
+        const document1 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('abc', 0),
+            new Set<string>(),
+            charSequence,
+            compareNumbers
+        );
+        const document2 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('abc', 0),
+            new Set<string>('b'),
+            charSequence,
+            compareNumbers
+        );
+        expect(document1.equals(document2)).to.be.false;
+        expect(document2.equals(document1)).to.be.false;
+    });
+
+    it('documents with different deleted content non equal', () => {
+        const document1 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('abc', 0),
+            new Set<string>('b'),
+            charSequence,
+            compareNumbers
+        );
+        const document2 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('abc', 0),
+            new Set<string>('c'),
+            charSequence,
+            compareNumbers
+        );
+        expect(document1.equals(document2)).to.be.false;
+        expect(document2.equals(document1)).to.be.false;
+    });
+
+    it('documents with the same deleted content equal', () => {
+        const document1 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('abc', 0),
+            new Set<string>('b'),
+            charSequence,
+            compareNumbers
+        );
+        const document2 = new RgaCvrdtDoc<string, string, number>(
+            charSequenceWithOrder('abc', 0),
+            new Set<string>('b'),
+            charSequence,
+            compareNumbers
+        );
+        expect(document1.equals(document2));
+        expect(document2.equals(document1));
+    });
 });
