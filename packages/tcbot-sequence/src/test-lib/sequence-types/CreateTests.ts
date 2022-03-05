@@ -108,36 +108,44 @@ class TestDocumentState<TSequenceElement, TOperation, TDocument extends Internal
             throw new Error('invalid order, already present');
         }
         operationsNew.set(order, mergableOp);
-        const operationsSorted = this.operationMapValuesSorted(operationsNew);
-        const newDocumentState = this.implementation.mergeFunc(operationsSorted);
+        const newDocumentState = this.documentState.applyOpWithOrder(mergableOp, order);
         return new TestDocumentState(newDocumentState, operationsNew, this.implementation);
-    }
-
-    private operationMapValuesSorted(operations: Map<number, MergableOpRequest<TOperation>>): MergableOpRequest<TOperation>[] {
-        return [...operations.keys()].sort().map((i) => { 
-            const val = operations.get(i);
-            if (!val) {
-                throw new Error("unexpectedly couldn't find key in map");
-            }
-            return val;
-        });
     }
 
     public read(): TSequenceElement[] {
         return this.documentState.read();
     }
 
-    public mergeWith(other: TestDocumentState<TSequenceElement, TOperation, TDocument>): TestDocumentState<TSequenceElement, TOperation, TDocument> {
-        [...this.operations.keys()].forEach((order) => {
-            if (other.operations.has(order)) {
-                if (this.operations.get(order) !== other.operations.get(order)) {
+    private updateDocumentWithOperationsNotIn(
+        document: TDocument,
+        operations: Map<number, MergableOpRequest<TOperation>>,
+        operationsAlreadyInDoc: Map<number, MergableOpRequest<TOperation>>
+    ): TDocument {
+        let documentAcc = document;
+        [...operations.keys()].sort((a, b) => a - b).forEach((order) => {
+            const operation = operations.get(order);
+            if (!operation) {
+                throw new Error("Unexpectedly couldn't find operation in map");
+            }
+            if (operationsAlreadyInDoc.has(order)) {
+                if (operation !== operationsAlreadyInDoc.get(order)) {
                     throw new Error('failed during merge, order maps to different operations in two document states');
                 }
+            } else {
+                documentAcc = documentAcc.applyOpWithOrder(operation, order);
             }
         });
+        return documentAcc;
+    }
+
+    public mergeWith(other: TestDocumentState<TSequenceElement, TOperation, TDocument>): TestDocumentState<TSequenceElement, TOperation, TDocument> {
+        const thisDocUpdated = this.updateDocumentWithOperationsNotIn(this.documentState, other.operations, this.operations);
+        const otherDocUpdated = this.updateDocumentWithOperationsNotIn(other.documentState, this.operations, other.operations);
+        if (!thisDocUpdated.equals(otherDocUpdated)) {
+            throw new Error('Convergence failure detected, documents at different sites are not equal');
+        }
         const newMap = new Map<number, MergableOpRequest<TOperation>>([...this.operations, ...other.operations]);
-        const newDoc = this.implementation.mergeFunc(this.operationMapValuesSorted(newMap));
-        return new TestDocumentState(newDoc, newMap, this.implementation);
+        return new TestDocumentState(thisDocUpdated, newMap, this.implementation);
     }
 }
 
@@ -145,7 +153,7 @@ class TestDocumentStateFactory<TSequenceElement, TOperation, TDocument extends I
     public constructor(private readonly implementation: SequenceTypeImplementation<TSequenceElement, TOperation, number, TDocument>) {}
 
     public emptyState(): TestDocumentState<TSequenceElement, TOperation, TDocument> {
-        const emptyDoc = this.implementation.mergeFunc([]);
+        const emptyDoc = this.implementation.emptyDocument();;
         return new TestDocumentState<TSequenceElement, TOperation, TDocument>(emptyDoc, new Map<number, MergableOpRequest<TOperation>>(), this.implementation);
     }
 }

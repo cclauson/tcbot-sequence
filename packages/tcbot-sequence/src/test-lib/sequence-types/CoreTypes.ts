@@ -6,7 +6,7 @@ export interface SequenceElementType<TSequenceElement, TSequenceElementIdentity>
 export interface InternalDocument<TSequenceElement, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, TOperationOrder>, TOperation, TOperationOrder> {
     read(): TSequenceElement[]
     equals(other: TInternalDocument): boolean
-    applyOpWithOrder(operation: TOperation, order: TOperationOrder): TInternalDocument
+    applyOpWithOrder(operation: MergableOpRequest<TOperation>, order: TOperationOrder): TInternalDocument
 }
 
 export interface SequenceTypeImplementation<TSequenceElement, TOperation, TOperationOrder, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, TOperationOrder>> {

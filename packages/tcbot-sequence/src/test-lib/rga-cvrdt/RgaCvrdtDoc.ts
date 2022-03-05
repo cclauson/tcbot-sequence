@@ -1,4 +1,4 @@
-import { InternalDocument, SequenceElementType } from "../sequence-types/CoreTypes";
+import { InternalDocument, MergableOpRequest, SequenceElementType } from "../sequence-types/CoreTypes";
 import { mergeEffectSequence } from "./MergeEffectSequence";
 import { RgaCvrdtOp } from "./RgaCvrdt";
 
@@ -38,6 +38,7 @@ export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceEl
                         throw new Error('unexpectedly comparing two distict sequence elements with same order');
                     }
                     // reverse--we want content that comes causally later to come earlier in sequence
+                    // NOTE: This is entirely a convention, but we choose this one to be consistent with standard RGA
                     return -ordering;
                 }
             ),
@@ -75,8 +76,11 @@ export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceEl
         return otherDeletedCopy.size === 0;
     }
 
-    public applyOpWithOrder(operation: RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, order: TSequenceElementOrder): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> {
-        throw new Error("Method not implemented.");
+    public applyOpWithOrder(mergableOp: MergableOpRequest<RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>>, order: TSequenceElementOrder): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> {
+        const operation = mergableOp.op;
+        return operation.type === 'insertion'
+            ? this.merge(operation.document)
+            : this.merge(new RgaCvrdtDoc([], operation.deleted, this.sequenceElementType, this.sequenceElementOrderCompFn));
     }
 
     // used for testing
