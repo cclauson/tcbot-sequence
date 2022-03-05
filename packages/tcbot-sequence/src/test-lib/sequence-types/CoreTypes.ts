@@ -4,13 +4,11 @@ export interface SequenceElementType<TSequenceElement, TSequenceElementIdentity>
 }
 
 export interface InternalDocument<TSequenceElement, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>> {
-    // TODO: Uncomment, implement
-    // read(): TSequenceElement[]
-    // equals(other: TInternalDocument): boolean
+    read(): TSequenceElement[]
+    equals(other: TInternalDocument): boolean
 }
 
 export interface SequenceTypeImplementation<TSequenceElement, TOperation, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>> {
-    documentReadFunc: (document: TInternalDocument) => TSequenceElement[],
     operationFromUserOpAppliedToDoc: (userOperation: UserOperation<TSequenceElement>, document: TInternalDocument) => TOperation,
     mergeFunc: (ops: MergableOpRequest<TOperation>[]) => TInternalDocument
 }

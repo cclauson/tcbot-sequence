@@ -9,4 +9,4 @@ class CharSequenceI implements SequenceElementType<string, string> {
     }
 }
 
-export const CharSequence: SequenceElementType<string, string> = new CharSequenceI();
+export const charSequence: SequenceElementType<string, string> = new CharSequenceI();

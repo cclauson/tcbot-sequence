@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { MergableOpRequest, SequenceTypeImplementation, userDeletionOperation, userInsertOperation, UserOperation } from "../CoreTypes";
+import { InternalDocument, MergableOpRequest, SequenceTypeImplementation, userDeletionOperation, userInsertOperation, UserOperation } from "./CoreTypes";
 
-export function createTests<TOperation, TDocument>(title: string, implementation: SequenceTypeImplementation<string, TOperation, TDocument>): void {
+export function createTests<TOperation, TDocument extends InternalDocument<string, TDocument>>(title: string, implementation: SequenceTypeImplementation<string, TOperation, TDocument>): void {
     const testDocumentStateFactory = new TestDocumentStateFactory(implementation);
 
     describe(title, () => {
@@ -93,7 +93,7 @@ function mergableOpFromOp<TOperation>(op: TOperation, causallyPreceding?: Iterab
     return new TestMergableOpRequest(op, causallyPreceding ? new Set<TOperation>(causallyPreceding) : new Set<TOperation>());
 }
 
-class TestDocumentState<TSequenceElement, TOperation, TDocument> {
+class TestDocumentState<TSequenceElement, TOperation, TDocument extends InternalDocument<TSequenceElement, TDocument>> {
     public constructor(
         private readonly documentState: TDocument,
         private readonly operations: Map<number, MergableOpRequest<TOperation>>,
@@ -124,7 +124,7 @@ class TestDocumentState<TSequenceElement, TOperation, TDocument> {
     }
 
     public read(): TSequenceElement[] {
-        return this.implementation.documentReadFunc(this.documentState);
+        return this.documentState.read();
     }
 
     public mergeWith(other: TestDocumentState<TSequenceElement, TOperation, TDocument>): TestDocumentState<TSequenceElement, TOperation, TDocument> {
@@ -141,7 +141,7 @@ class TestDocumentState<TSequenceElement, TOperation, TDocument> {
     }
 }
 
-class TestDocumentStateFactory<TSequenceElement, TOperation, TDocument> {
+class TestDocumentStateFactory<TSequenceElement, TOperation, TDocument extends InternalDocument<TSequenceElement, TDocument>> {
     public constructor(private readonly implementation: SequenceTypeImplementation<TSequenceElement, TOperation, TDocument>) {}
 
     public emptyState(): TestDocumentState<TSequenceElement, TOperation, TDocument> {

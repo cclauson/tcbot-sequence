@@ -75,7 +75,7 @@ export function generateOpsAndTest<TInternalDocument extends InternalDocument<TS
                 userOp, sequenceAppliedTo, partialEffectRelation);
         });
         const doc = sequenceTypeImplementation.mergeFunc(mergableOpSequence);
-        const sequence = sequenceTypeImplementation.documentReadFunc(doc);
+        const sequence = doc.read();
         const result = partialEffectRelation.verifySequence(sequence);
         return {
             sequence,
