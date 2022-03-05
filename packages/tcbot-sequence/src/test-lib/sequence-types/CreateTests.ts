@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { InternalDocument, MergableOpRequest, SequenceTypeImplementation, userDeletionOperation, userInsertOperation, UserOperation } from "./CoreTypes";
 
-export function createTests<TOperation, TDocument extends InternalDocument<string, TDocument>>(title: string, implementation: SequenceTypeImplementation<string, TOperation, TDocument>): void {
+export function createTests<TOperation, TDocument extends InternalDocument<string, TDocument, TOperation, number>>(title: string, implementation: SequenceTypeImplementation<string, TOperation, number, TDocument>): void {
     const testDocumentStateFactory = new TestDocumentStateFactory(implementation);
 
     describe(title, () => {
@@ -93,14 +93,14 @@ function mergableOpFromOp<TOperation>(op: TOperation, causallyPreceding?: Iterab
     return new TestMergableOpRequest(op, causallyPreceding ? new Set<TOperation>(causallyPreceding) : new Set<TOperation>());
 }
 
-class TestDocumentState<TSequenceElement, TOperation, TDocument extends InternalDocument<TSequenceElement, TDocument>> {
+class TestDocumentState<TSequenceElement, TOperation, TDocument extends InternalDocument<TSequenceElement, TDocument, TOperation, number>> {
     public constructor(
         private readonly documentState: TDocument,
         private readonly operations: Map<number, MergableOpRequest<TOperation>>,
-        private readonly implementation: SequenceTypeImplementation<TSequenceElement, TOperation, TDocument>) {}
+        private readonly implementation: SequenceTypeImplementation<TSequenceElement, TOperation, number, TDocument>) {}
 
     public withUserOperation(userOperation: UserOperation<TSequenceElement>, order: number): TestDocumentState<TSequenceElement, TOperation, TDocument> {
-        const newOp = this.implementation.operationFromUserOpAppliedToDoc(userOperation, this.documentState);
+        const newOp = this.implementation.operationFromUserOpAppliedToDoc(userOperation, this.documentState, order);
         const causallyPrecedingOps = [...this.operations.values()].map((op) => op.op);
         const mergableOp = mergableOpFromOp(newOp, causallyPrecedingOps);
         const operationsNew = new Map<number, MergableOpRequest<TOperation>>(this.operations);
@@ -141,8 +141,8 @@ class TestDocumentState<TSequenceElement, TOperation, TDocument extends Internal
     }
 }
 
-class TestDocumentStateFactory<TSequenceElement, TOperation, TDocument extends InternalDocument<TSequenceElement, TDocument>> {
-    public constructor(private readonly implementation: SequenceTypeImplementation<TSequenceElement, TOperation, TDocument>) {}
+class TestDocumentStateFactory<TSequenceElement, TOperation, TDocument extends InternalDocument<TSequenceElement, TDocument, TOperation, number>> {
+    public constructor(private readonly implementation: SequenceTypeImplementation<TSequenceElement, TOperation, number, TDocument>) {}
 
     public emptyState(): TestDocumentState<TSequenceElement, TOperation, TDocument> {
         const emptyDoc = this.implementation.mergeFunc([]);

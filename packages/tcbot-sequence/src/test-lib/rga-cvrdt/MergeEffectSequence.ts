@@ -1,6 +1,7 @@
 export function mergeEffectSequence<TSequenceElement>(
     sequence1: TSequenceElement[],
     sequence2: TSequenceElement[],
+    equal: (sequenceElement1: TSequenceElement, sequenceElement2: TSequenceElement) => boolean,
     comp: (sequenceElement1: TSequenceElement, sequenceElement2: TSequenceElement) => number
 ): TSequenceElement[] {
     if (sequence1.length === 0) {
@@ -15,14 +16,14 @@ export function mergeEffectSequence<TSequenceElement>(
     while (i1 < sequence1.length && i2 < sequence2.length) {
         const el1 = sequence1[i1];
         const el2 = sequence2[i2];
-        if (comp(el1, el2) === 0) {
+        if (equal(el1, el2)) {
             ++i1;
             ++i2;
             resultBuffer.push(el1);
-        } else if (sequence2.slice(i2 + 1).some(el => comp(el, el1) === 0)) {
+        } else if (sequence2.slice(i2 + 1).some(el => equal(el, el1))) {
             resultBuffer.push(el2);
             ++i2;
-        } else if (sequence1.slice(i1 + 1).some(el => comp(el, el2) === 0)) {
+        } else if (sequence1.slice(i1 + 1).some(el => equal(el, el2))) {
             resultBuffer.push(el1);
             ++i1;
         } else if (comp(el1, el2) < 0) {

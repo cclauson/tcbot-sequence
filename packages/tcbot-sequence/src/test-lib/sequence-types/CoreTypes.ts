@@ -3,14 +3,16 @@ export interface SequenceElementType<TSequenceElement, TSequenceElementIdentity>
     sequenceElementStringificationFunc: (sequenceElement: TSequenceElement) => string
 }
 
-export interface InternalDocument<TSequenceElement, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>> {
+export interface InternalDocument<TSequenceElement, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, TOperationOrder>, TOperation, TOperationOrder> {
     read(): TSequenceElement[]
     equals(other: TInternalDocument): boolean
+    applyOpWithOrder(operation: TOperation, order: TOperationOrder): TInternalDocument
 }
 
-export interface SequenceTypeImplementation<TSequenceElement, TOperation, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>> {
-    operationFromUserOpAppliedToDoc: (userOperation: UserOperation<TSequenceElement>, document: TInternalDocument) => TOperation,
+export interface SequenceTypeImplementation<TSequenceElement, TOperation, TOperationOrder, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, TOperationOrder>> {
+    operationFromUserOpAppliedToDoc: (userOperation: UserOperation<TSequenceElement>, document: TInternalDocument, order: TOperationOrder) => TOperation,
     mergeFunc: (ops: MergableOpRequest<TOperation>[]) => TInternalDocument
+    emptyDocument: () => TInternalDocument
 }
 
 export interface MergableOpRequest<TOperation> {

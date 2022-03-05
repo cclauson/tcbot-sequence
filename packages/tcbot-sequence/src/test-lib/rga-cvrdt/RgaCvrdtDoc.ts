@@ -1,46 +1,68 @@
 import { InternalDocument, SequenceElementType } from "../sequence-types/CoreTypes";
 import { mergeEffectSequence } from "./MergeEffectSequence";
+import { RgaCvrdtOp } from "./RgaCvrdt";
 
-export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity> implements InternalDocument<TSequenceElement, RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>> {
+export interface EffectSequenceElement<TSequenceElement, TSequenceElementOrder> {
+    sequenceElement: TSequenceElement,
+    order: TSequenceElementOrder
+}
+
+export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> implements InternalDocument<TSequenceElement, RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, TSequenceElementOrder> {
     constructor(
-        private readonly effectSequence: TSequenceElement[],
+        private readonly effectSequence: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[],
         private readonly deleted: Set<TSequenceElementIdentity>,
-        private readonly sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>
+        private readonly sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
+        private readonly sequenceElementOrderCompFn: (o1: TSequenceElementOrder, o2: TSequenceElementOrder) => number
     ) {}
 
-    public getEffectSequence(): TSequenceElement[] {
+    public read(): TSequenceElement[] {
+        return this.getNonTombstoneEffectSequence().map(effectSequenceElement => effectSequenceElement.sequenceElement);
+    }
+
+    public getNonTombstoneEffectSequence(): EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[] {
+        return this.effectSequence.filter(
+            (effectSequenceElement) => !this.deleted.has(this.sequenceElementType.identityForSequenceElementFunc(effectSequenceElement.sequenceElement)));
+    }
+
+    public merge(other: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>) {
+        return new RgaCvrdtDoc(
+            mergeEffectSequence(
+                this.effectSequence,
+                other.effectSequence,
+                (sequenceElement1: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>, sequenceElement2: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>) => {
+                    return this.sequenceElementType.identityForSequenceElementFunc(sequenceElement1.sequenceElement) === this.sequenceElementType.identityForSequenceElementFunc(sequenceElement2.sequenceElement);
+                },
+                (sequenceElement1: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>, sequenceElement2: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>) => {
+                    const ordering = this.sequenceElementOrderCompFn(sequenceElement1.order, sequenceElement2.order);
+                    if (ordering === 0) {
+                        throw new Error('unexpectedly comparing two distict sequence elements with same order');
+                    }
+                    // reverse--we want content that comes causally later to come earlier in sequence
+                    return -ordering;
+                }
+            ),
+            new Set([...this.deleted, ...other.deleted]),
+            this.sequenceElementType,
+            this.sequenceElementOrderCompFn
+        );
+    }
+
+    public equals(other: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>): boolean {
+        throw new Error("Method not implemented.");
+    }
+
+    public applyOpWithOrder(operation: RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, order: TSequenceElementOrder): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> {
+        throw new Error("Method not implemented.");
+    }
+
+    // used for testing
+    public getEffectSequence(): EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[] {
         return [...this.effectSequence];
     }
 
+    // used for testing
     public getDeleted(): Set<TSequenceElementIdentity> {
         return new Set<TSequenceElementIdentity>([...this.deleted]);
     }
 
-    public read(): TSequenceElement[] {
-        const outputBuffer: TSequenceElement[] = [];
-        this.effectSequence.forEach((sequenceElement) => {
-            if (!this.deleted.has(this.sequenceElementType.identityForSequenceElementFunc(sequenceElement))) {
-                outputBuffer.push(sequenceElement);
-            }
-        })
-        return outputBuffer;
-    }
-
-    public merge(other: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>, comp: (sequenceElement1: TSequenceElement, sequenceElement2: TSequenceElement) => number) {
-        return new RgaCvrdtDoc(
-            mergeEffectSequence(this.effectSequence, other.effectSequence, comp),
-            new Set([...this.deleted, ...other.deleted]),
-            this.sequenceElementType
-        );
-    }
-
-    public equals(other: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>): boolean {
-        throw new Error("Method not implemented.");
-    }
 }
-
-export function emptyDocument<TSequenceElement, TSequenceElementIdentity>(
-    sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>
-): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity> {
-    return new RgaCvrdtDoc([], new Set<TSequenceElementIdentity>(), sequenceElementType);
-};

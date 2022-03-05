@@ -40,10 +40,10 @@ export interface SequenceElementGenerator<TSequenceElement> {
     next(): TSequenceElement
 }
 
-export function generateOpsAndTest<TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>, TOperation, TSequenceElement, TSequenceElementIdentity>(
+export function generateOpsAndTest<TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, number>, TOperation, TSequenceElement, TSequenceElementIdentity>(
     sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
     sequenceElementGenerator: SequenceElementGenerator<TSequenceElement>,
-    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, TInternalDocument>,
+    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, number, TInternalDocument>,
     random: Random
 ): string | undefined {
     const opNodeList: OpNode<TOperation, TSequenceElement>[] = [];
@@ -105,7 +105,7 @@ export function generateOpsAndTest<TInternalDocument extends InternalDocument<TS
 
         mergableOpFinal.opNode.opInfo = {
             userOp,
-            op: sequenceTypeImplementation.operationFromUserOpAppliedToDoc(userOp, doc),
+            op: sequenceTypeImplementation.operationFromUserOpAppliedToDoc(userOp, doc, i),
             sequenceAppliedTo: sequence
         };
     }

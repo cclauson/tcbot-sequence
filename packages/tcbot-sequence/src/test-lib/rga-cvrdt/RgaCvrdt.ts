@@ -1,9 +1,9 @@
-import { emptyDocument, RgaCvrdtDoc } from "./RgaCvrdtDoc";
+import { EffectSequenceElement, RgaCvrdtDoc } from "./RgaCvrdtDoc";
 import { MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../sequence-types/CoreTypes";
 
-interface RgaCvrdtInsertionOp<TSequenceElement, TSequenceElementIdentity> {
+interface RgaCvrdtInsertionOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
     type: 'insertion',
-    document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>,
+    document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>,
     inserted: Set<TSequenceElementIdentity>
 }
 
@@ -12,40 +12,45 @@ interface RgaCvrdtDeletionOp<TSequenceElementIdentity> {
     deleted: Set<TSequenceElementIdentity>
 }
 
-export type RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity> = RgaCvrdtInsertionOp<TSequenceElement, TSequenceElementIdentity>
+export type RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> = RgaCvrdtInsertionOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder>
     | RgaCvrdtDeletionOp<TSequenceElementIdentity>;
 
-export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity> implements
-    SequenceTypeImplementation<TSequenceElement, RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity>, RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>> {
+export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity, TOperationOrder> implements
+    SequenceTypeImplementation<TSequenceElement, RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder>, TOperationOrder, RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>> {
 
-    private readonly sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>;
-
-    public constructor(sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>) {
+    public constructor(
+        private readonly sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
+        private readonly sequenceElementOrderCompFn: (o1: TOperationOrder, o2: TOperationOrder) => number) {
         this.sequenceElementType = sequenceElementType;
     }
+
+    public emptyDocument(): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
+        return new RgaCvrdtDoc([] as EffectSequenceElement<TSequenceElement, TOperationOrder>[], new Set<TSequenceElementIdentity>(), this.sequenceElementType, this.sequenceElementOrderCompFn);
+    };
     
-    public documentReadFunc(document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>): TSequenceElement[] {
+    public documentReadFunc(document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>): TSequenceElement[] {
         return document.read();
     }
 
-    public operationFromUserOpAppliedToDoc(userOperation: UserOperation<TSequenceElement>, document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>): RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity> {
-        const readResult = document.read();
+    public operationFromUserOpAppliedToDoc(userOperation: UserOperation<TSequenceElement>, document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>, order: TOperationOrder): RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
+        const nonTombstoneEffectSequence = document.getNonTombstoneEffectSequence();
         if (userOperation.type === 'insertion') {
-            const effectSequence: TSequenceElement[] = [];
+            const effectSequence: EffectSequenceElement<TSequenceElement, TOperationOrder>[] = [];
             if (userOperation.index !== 0) {
-                effectSequence.push(readResult[userOperation.index - 1]);
+                effectSequence.push(nonTombstoneEffectSequence[userOperation.index - 1]);
             }
-            effectSequence.push(...userOperation.content);
-            if (userOperation.index !== readResult.length) {
-                effectSequence.push(readResult[userOperation.index]);
+            effectSequence.push(...userOperation.content.map(seqEl => { return { sequenceElement: seqEl, order };}));
+            if (userOperation.index !== nonTombstoneEffectSequence.length) {
+                effectSequence.push(nonTombstoneEffectSequence[userOperation.index]);
             }
-            const insertionDoc: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity> = new RgaCvrdtDoc(
+            const insertionDoc: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder> = new RgaCvrdtDoc(
                 effectSequence,
                 new Set<TSequenceElementIdentity>(),
-                this.sequenceElementType
+                this.sequenceElementType,
+                this.sequenceElementOrderCompFn
             );
             const insertedIdentities = new Set<TSequenceElementIdentity>(userOperation.content.map(this.sequenceElementType.identityForSequenceElementFunc));
-            const mergedDoc = this.addTiebreakingSucceedingContentViaDocumentMerge(document, insertionDoc, insertedIdentities);
+            const mergedDoc = document.merge(insertionDoc);
             return {
                 type: 'insertion',
                 document: mergedDoc,
@@ -53,7 +58,9 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity> implements
             };
         } else {
             const deletedIdentities =
-                readResult.slice(userOperation.startIndex, userOperation.endIndex).map(this.sequenceElementType.identityForSequenceElementFunc);
+                nonTombstoneEffectSequence.slice(userOperation.startIndex, userOperation.endIndex).map(
+                    seqEl => this.sequenceElementType.identityForSequenceElementFunc(seqEl.sequenceElement)
+                );
             return {
                 type: 'deletion',
                 deleted: new Set<TSequenceElementIdentity>(deletedIdentities)
@@ -61,54 +68,14 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity> implements
         }
     }
 
-    // supplement a document with additional content in the form of a document, where all new content which is distict
-    // from that already in the document succeeds that in the document in tiebreaking order
-    private addTiebreakingSucceedingContentViaDocumentMerge(
-        doc: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>,
-        newContent: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity>,
-        insertedIdentities: Set<TSequenceElementIdentity>
-    ): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity> {
-        const compareWithinSequence = (seqElId1: TSequenceElementIdentity, seqElId2: TSequenceElementIdentity, seq: TSequenceElement[]) => {
-            const index1 = seq.findIndex((el) => this.sequenceElementType.identityForSequenceElementFunc(el) === seqElId1);
-            const index2 = seq.findIndex((el) => this.sequenceElementType.identityForSequenceElementFunc(el) === seqElId2);
-            if (index1 < 0 || index2 < 0) {
-                throw new Error('unexpectedly failed to find identity in sequence');
-            }
-            return index1 - index2;
-        }
-
-        return doc.merge(newContent, (seqEl1: TSequenceElement, seqEl2: TSequenceElement) => {
-            const seqElId1 = this.sequenceElementType.identityForSequenceElementFunc(seqEl1);
-            const seqElId2 = this.sequenceElementType.identityForSequenceElementFunc(seqEl2);
-            if (seqElId1 === seqElId2) {
-                return 0;
-            } else if (insertedIdentities.has(seqElId1) && insertedIdentities.has(seqElId2)) {
-                return compareWithinSequence(seqElId1, seqElId2, newContent.getEffectSequence());
-            } else if (insertedIdentities.has(seqElId1)) {
-                // seqEl1 comes later in causally consistent tiebreaking order, therefore
-                // place it first in spatial order (this is consistent with rga)
-                return -1;
-            } else if (insertedIdentities.has(seqElId2)) {
-                // and vice versa
-                return 1;
-            } else {
-                return compareWithinSequence(seqElId1, seqElId2, doc.getEffectSequence());
-            }
-        });
-    }
-
-    public mergeFunc(ops: MergableOpRequest<RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity>>[]): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity> {
-        let document = emptyDocument<TSequenceElement, TSequenceElementIdentity>(this.sequenceElementType);
+    public mergeFunc(ops: MergableOpRequest<RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder>>[]): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
+        let document = this.emptyDocument();
         for(let mergableOp of ops) {
             const op = mergableOp.op;
             if (op.type === 'insertion') {
-                document = this.addTiebreakingSucceedingContentViaDocumentMerge(document, op.document, op.inserted);
+                document = document.merge(op.document);
             } else {
-                document = document.merge(
-                    new RgaCvrdtDoc([], op.deleted, this.sequenceElementType),
-                    // doesn't matter--TODO: Refactor this...
-                    () => { return 0; }
-                );
+                document = document.merge(new RgaCvrdtDoc([], op.deleted, this.sequenceElementType, this.sequenceElementOrderCompFn));
             }
         }
         return document;

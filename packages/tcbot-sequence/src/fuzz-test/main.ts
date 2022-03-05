@@ -5,12 +5,16 @@ import { RgaCvrdt } from "../test-lib/rga-cvrdt/RgaCvrdt";
 import { CharGenerator } from "./CharGenerator";
 import { generateOpsAndTest, SequenceElementGenerator } from "./GenerateOpsAndTest";
 
-runIterated(charSequence, () => new CharGenerator(), new RgaCvrdt(charSequence), 10000);
+function compareNumbers(n1: number, n2: number): number {
+    return n1 - n2;
+}
 
-function runIterated<TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument>, TOperation, TSequenceElement, TSequenceElementIdentity>(
+runIterated(charSequence, () => new CharGenerator(), new RgaCvrdt(charSequence, compareNumbers), 10000);
+
+function runIterated<TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, number>, TOperation, TSequenceElement, TSequenceElementIdentity>(
     sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
     createNewSequenceElementGeneratorFn: () => SequenceElementGenerator<TSequenceElement>,
-    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, TInternalDocument>,
+    sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, number, TInternalDocument>,
     numRuns: number,
     seed?: string
 ) {
