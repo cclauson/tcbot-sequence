@@ -67,17 +67,4 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity, TOperationOrde
             }
         }
     }
-
-    public mergeFunc(ops: MergableOpRequest<RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder>>[]): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
-        let document = this.emptyDocument();
-        for(let mergableOp of ops) {
-            const op = mergableOp.op;
-            if (op.type === 'insertion') {
-                document = document.merge(op.document);
-            } else {
-                document = document.merge(new RgaCvrdtDoc([], op.deleted, this.sequenceElementType, this.sequenceElementOrderCompFn));
-            }
-        }
-        return document;
-    }
 }

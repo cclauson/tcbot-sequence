@@ -11,7 +11,6 @@ export interface InternalDocument<TSequenceElement, TInternalDocument extends In
 
 export interface SequenceTypeImplementation<TSequenceElement, TOperation, TOperationOrder, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, TOperationOrder>> {
     operationFromUserOpAppliedToDoc: (userOperation: UserOperation<TSequenceElement>, document: TInternalDocument, order: TOperationOrder) => TOperation,
-    mergeFunc: (ops: MergableOpRequest<TOperation>[]) => TInternalDocument
     emptyDocument: () => TInternalDocument
 }
 
