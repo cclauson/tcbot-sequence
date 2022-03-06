@@ -138,6 +138,13 @@ export class Digraph<TNode> {
             }
         }
     }
+
+    public nodesWithOutdegreeZero(): Set<TNode> {
+        const noForwardEdges = [...this.nodes].filter(node => {
+            return !this.forwardEdges.has(node);
+        });
+        return new Set<TNode>(noForwardEdges);
+    }
 }
 
 export function randomMinimumDigraphFromSequence<TNode>(nodeSequence: TNode[], random: Random): Digraph<TNode> {

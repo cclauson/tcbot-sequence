@@ -2,23 +2,25 @@ import { Digraph, randomMinimumDigraphFromSequence } from "../test-lib/digraph/D
 import { PartialEffectRelation, SequenceLimit, SequenceVerificationResult } from "../test-lib/partial-effect-relation/PartialEffectRelation";
 import { Random } from "../test-lib/random/Random";
 import { InternalDocument, MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../test-lib/sequence-types/CoreTypes";
+import { TestDocumentState, TestDocumentStateFactory } from "../test-lib/sequence-types/TestDocumentState";
 
-interface OpNode<TOperation, TSequenceElement> {
+interface OpNode<TOperation, TSequenceElement, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, number>> {
     sequenceNumber: number,
-    opInfo: OpInfo<TOperation, TSequenceElement> | undefined
+    opInfo: OpInfo<TOperation, TSequenceElement, TInternalDocument> | undefined
 };
 
-interface OpInfo<TOperation, TSequenceElement> {
+interface OpInfo<TOperation, TSequenceElement, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, number>> {
     op: TOperation,
     userOp: UserOperation<TSequenceElement>,
     sequenceAppliedTo: TSequenceElement[],
+    testDocumentState: TestDocumentState<TSequenceElement, TOperation, TInternalDocument>
 }
 
-class MergableOpRequestForOpNode<TOperation, TSequenceElement> implements MergableOpRequest<TOperation> {
-    public readonly opNode: OpNode<TOperation, TSequenceElement>;
-    private readonly causalityGraph: Digraph<OpNode<TOperation, TSequenceElement>>;
+class MergableOpRequestForOpNode<TOperation, TSequenceElement, TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, number>> implements MergableOpRequest<TOperation> {
+    public readonly opNode: OpNode<TOperation, TSequenceElement, TInternalDocument>;
+    private readonly causalityGraph: Digraph<OpNode<TOperation, TSequenceElement, TInternalDocument>>;
 
-    public constructor(opNode: OpNode<TOperation, TSequenceElement>, causalityGraph: Digraph<OpNode<TOperation, TSequenceElement>>) {
+    public constructor(opNode: OpNode<TOperation, TSequenceElement, TInternalDocument>, causalityGraph: Digraph<OpNode<TOperation, TSequenceElement, TInternalDocument>>) {
         this.opNode = opNode;
         this.causalityGraph = causalityGraph;
     }
@@ -31,7 +33,7 @@ class MergableOpRequestForOpNode<TOperation, TSequenceElement> implements Mergab
     }
 
     public causallyPrecedes(otherOpReq: MergableOpRequest<TOperation>): boolean {
-        const other = otherOpReq as MergableOpRequestForOpNode<TOperation, TSequenceElement>;
+        const other = otherOpReq as MergableOpRequestForOpNode<TOperation, TSequenceElement, TInternalDocument>;
         return [...this.causalityGraph.iterateSuccessors(this.opNode)].some((opNode) => opNode === other.opNode);
     }
 }
@@ -46,7 +48,7 @@ export function generateOpsAndTest<TInternalDocument extends InternalDocument<TS
     sequenceTypeImplementation: SequenceTypeImplementation<TSequenceElement, TOperation, number, TInternalDocument>,
     random: Random
 ): string | undefined {
-    const opNodeList: OpNode<TOperation, TSequenceElement>[] = [];
+    const opNodeList: OpNode<TOperation, TSequenceElement, TInternalDocument>[] = [];
     for (let i = 0; i < 20; ++i) {
         opNodeList.push({
             opInfo: undefined,
@@ -56,16 +58,14 @@ export function generateOpsAndTest<TInternalDocument extends InternalDocument<TS
     const causalityGraph = randomMinimumDigraphFromSequence(opNodeList, random);
     const mergableOps = opNodeList.map(opNode => new MergableOpRequestForOpNode(opNode, causalityGraph));
 
-    function verifyMergableOpSequence(mergableOpSequence: MergableOpRequest<TOperation>[]): {
-        sequence: TSequenceElement[],
-        doc: TInternalDocument,
-        result: SequenceVerificationResult
-    } {
+    const testDocumentStateFactory = new TestDocumentStateFactory(sequenceTypeImplementation);
+
+    function populatePartialEffectRelation(mergableOpSequence: MergableOpRequest<TOperation>[]): PartialEffectRelation<TSequenceElement, TSequenceElementIdentity> {
         const partialEffectRelation = new PartialEffectRelation<TSequenceElement, TSequenceElementIdentity>(
             sequenceElementType.identityForSequenceElementFunc, sequenceElementType.sequenceElementStringificationFunc);
 
         mergableOpSequence.forEach((mergableOp) => {
-            const opNode = (mergableOp as MergableOpRequestForOpNode<TOperation, TSequenceElement>).opNode;
+            const opNode = (mergableOp as MergableOpRequestForOpNode<TOperation, TSequenceElement, TInternalDocument>).opNode;
             if (!opNode.opInfo) {
                 throw new Error("unexpectedly couldn't find operation info on mergable op");
             }
@@ -74,21 +74,45 @@ export function generateOpsAndTest<TInternalDocument extends InternalDocument<TS
             applyUserOpToPartialEffectRelation<TSequenceElement, TSequenceElementIdentity>(
                 userOp, sequenceAppliedTo, partialEffectRelation);
         });
-        const doc = sequenceTypeImplementation.mergeFunc(mergableOpSequence);
-        const sequence = doc.read();
+
+        return partialEffectRelation;
+    }
+
+    function verifyMergableOpSequence(
+        mergableOpSequence: MergableOpRequestForOpNode<TOperation, TSequenceElement, TInternalDocument>[],
+        headMergableOps: Set<OpNode<TOperation, TSequenceElement, TInternalDocument>>
+    ): {
+        sequence: TSequenceElement[],
+        result: SequenceVerificationResult,
+        testDocState: TestDocumentState<TSequenceElement, TOperation, TInternalDocument>
+    } {
+        const immediateCausalPredecessors = headMergableOps;
+        let testDocState = testDocumentStateFactory.emptyState();
+        for (let immediateCausalPredecessor of immediateCausalPredecessors) {
+            if (!immediateCausalPredecessor.opInfo) {
+                throw new Error('Unexpected found no op info on node');
+            }
+            testDocState = testDocState.mergeWith(immediateCausalPredecessor.opInfo.testDocumentState);
+        }
+        
+        const partialEffectRelation = populatePartialEffectRelation(mergableOpSequence);
+
+        const sequence = testDocState.read();
         const result = partialEffectRelation.verifySequence(sequence);
+
         return {
             sequence,
-            doc,
-            result
+            result,
+            testDocState
         }
     }
 
     for (let i = 0; i < 20; ++i) {
+        const mergableOpFinal = mergableOps[i];
+
         // populate mergableOpSequence with all causally preceding
         // mergable ops up to (but not including) the ith
-        const mergableOpSequence: MergableOpRequest<TOperation>[] = [];
-        const mergableOpFinal = mergableOps[i];
+        const mergableOpSequence: MergableOpRequestForOpNode<TOperation, TSequenceElement, TInternalDocument>[] = [];
         for (let j = 0; j < i; ++j) {
             const mergableOpCur = mergableOps[j];
             if (mergableOpCur.causallyPrecedes(mergableOpFinal)) {
@@ -96,21 +120,23 @@ export function generateOpsAndTest<TInternalDocument extends InternalDocument<TS
             }
         }
 
-        const { sequence, doc, result } = verifyMergableOpSequence(mergableOpSequence);
+        const immediateCausalPredecessors = causalityGraph.getImmedatePredecessorNodes(mergableOpFinal.opNode)
+        const { sequence, result, testDocState } = verifyMergableOpSequence(mergableOpSequence, immediateCausalPredecessors);
+
         if (result.type === 'failure') {
             return result.reason;
         }
 
         const userOp = createRandomUserOperation(sequence, sequenceElementGenerator, random);
-
         mergableOpFinal.opNode.opInfo = {
             userOp,
-            op: sequenceTypeImplementation.operationFromUserOpAppliedToDoc(userOp, doc, i),
-            sequenceAppliedTo: sequence
+            op: sequenceTypeImplementation.operationFromUserOpAppliedToDoc(userOp, testDocState.documentState, i),
+            sequenceAppliedTo: sequence,
+            testDocumentState: testDocState.withUserOperation(userOp, i)
         };
     }
 
-    const { result } = verifyMergableOpSequence(mergableOps);
+    const { result } = verifyMergableOpSequence(mergableOps, causalityGraph.nodesWithOutdegreeZero());
     return result.type === 'failure' ? result.reason : undefined;
 }
 

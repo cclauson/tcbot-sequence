@@ -13,6 +13,13 @@
             "runtimeArgs": [
                 "--ignore-certificate-errors"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch fuzz tests",
+            "program": "${workspaceFolder}/packages/tcbot-sequence/dist/fuzz-test/main.js"
         }
+
     ]
 }

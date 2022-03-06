@@ -258,4 +258,22 @@ describe('Digraph', () => {
             }
         }
     });
+
+    it('a graph with a single node returns the node as having out degree zero', () => {
+        const digraph = new Digraph();
+
+        digraph.addNode('a');
+
+        expect(digraph.nodesWithOutdegreeZero().size).equals(1);
+    });
+
+    it('a graph with two nodes and one edge returns the node as having out degree zero', () => {
+        const digraph = new Digraph();
+
+        digraph.addNode('a');
+        digraph.addNode('b');
+        digraph.addEdge('a', 'b');
+
+        expect(digraph.nodesWithOutdegreeZero().size).equals(1);
+    });
 });
