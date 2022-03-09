@@ -1,5 +1,5 @@
 {
-  "name": "@cclauson/tcbot-sequence",
+  "name": "@cclauson/trot-sequence",
   "version": "1.0.0",
   "description": "A shared sequence type based on a novel variation of operational transformation",
   "main": "dist/index.js",
@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cclauson/tcbot-sequence.git"
+    "url": "git+https://github.com/cclauson/trot-sequence.git"
   },
   "author": "C. Clauson",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/cclauson/tcbot-sequence/issues"
+    "url": "https://github.com/cclauson/trot-sequence/issues"
   },
-  "homepage": "https://github.com/cclauson/tcbot-sequence#readme",
+  "homepage": "https://github.com/cclauson/trot-sequence#readme",
   "devDependencies": {
     "@types/chai": "^4.3.0",
     "@types/mocha": "^9.1.0",

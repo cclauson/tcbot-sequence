@@ -18,7 +18,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch fuzz tests",
-            "program": "${workspaceFolder}/packages/tcbot-sequence/dist/fuzz-test/main.js"
+            "program": "${workspaceFolder}/packages/trot-sequence/dist/fuzz-test/main.js"
         }
 
     ]

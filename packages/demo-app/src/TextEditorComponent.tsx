@@ -2,7 +2,7 @@ import { DataObject, DataObjectFactory } from "@fluidframework/aqueduct";
 import { IFluidHTMLOptions, IFluidHTMLView } from "@fluidframework/view-interfaces";
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
-import { SharedTcbotSequence } from "@cclauson/tcbot-sequence-fluid";
+import { SharedTrotSequence } from "@cclauson/trot-sequence-fluid";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
 
 export class TextEditorComponent extends DataObject implements IFluidHTMLView {
@@ -11,14 +11,14 @@ export class TextEditorComponent extends DataObject implements IFluidHTMLView {
     public static factory = new DataObjectFactory(
         "TextEditorComponent",
         TextEditorComponent,
-        [SharedTcbotSequence.Factory],
+        [SharedTrotSequence.Factory],
         {}
     );
 
-    private static sequenceKey = 'tcbot-sequence-key';
+    private static sequenceKey = 'trot-sequence-key';
 
     public async render(div: HTMLElement, _options?: IFluidHTMLOptions): Promise<void> {
-        const sequenceHandle = this.root.get<IFluidHandle<SharedTcbotSequence>>(TextEditorComponent.sequenceKey);
+        const sequenceHandle = this.root.get<IFluidHandle<SharedTrotSequence>>(TextEditorComponent.sequenceKey);
         if (!sequenceHandle) {
             throw new Error("unexpectedly couldn't get sequence dds handle");
         }
@@ -39,7 +39,7 @@ export class TextEditorComponent extends DataObject implements IFluidHTMLView {
     }
 
     protected async initializingFirstTime(): Promise<void> {
-        const sequence = SharedTcbotSequence.create(this.runtime);
+        const sequence = SharedTrotSequence.create(this.runtime);
         this.root.set(TextEditorComponent.sequenceKey, sequence.handle);
     }
 }

@@ -2,15 +2,15 @@ import { IFluidSerializer } from "@fluidframework/core-interfaces";
 import { IChannelStorageService, IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
 import { ISequencedDocumentMessage, ITree, FileMode, TreeEntry } from "@fluidframework/protocol-definitions";
 import { SharedObject } from "@fluidframework/shared-object-base";
-import { val } from "@cclauson/tcbot-sequence";
-import { SharedTcbotSequenceFactory } from "./Factory";
+import { val } from "@cclauson/trot-sequence";
+import { SharedTrotSequenceFactory } from "./Factory";
 
-export class SharedTcbotSequence extends SharedObject {
+export class SharedTrotSequence extends SharedObject {
 
-    public static Factory = new SharedTcbotSequenceFactory();
+    public static Factory = new SharedTrotSequenceFactory();
 
-    public static create(runtime: IFluidDataStoreRuntime, id?: string): SharedTcbotSequence {
-		return runtime.createChannel(id, SharedTcbotSequenceFactory.Type) as SharedTcbotSequence;
+    public static create(runtime: IFluidDataStoreRuntime, id?: string): SharedTrotSequence {
+		return runtime.createChannel(id, SharedTrotSequenceFactory.Type) as SharedTrotSequence;
 	}
 
     protected snapshotCore(serializer: IFluidSerializer): ITree {

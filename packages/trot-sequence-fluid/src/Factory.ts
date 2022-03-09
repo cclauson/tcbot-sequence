@@ -1,22 +1,22 @@
 import { IChannel, IChannelAttributes, IChannelFactory, IChannelServices, IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
-import { SharedTcbotSequence } from ".";
+import { SharedTrotSequence } from ".";
 
-export class SharedTcbotSequenceFactory implements IChannelFactory {
+export class SharedTrotSequenceFactory implements IChannelFactory {
 
-    public static Type = "SharedTcbotSequence";
+    public static Type = "SharedTrotSequence";
 
     public static Attributes: IChannelAttributes = {
-        type: SharedTcbotSequenceFactory.Type,
+        type: SharedTrotSequenceFactory.Type,
         snapshotFormatVersion: "0.1",
         packageVersion: "0.1"
     };
 
     public get type(): string {
-        return SharedTcbotSequenceFactory.Type;
+        return SharedTrotSequenceFactory.Type;
     }
 
     public get attributes(): IChannelAttributes {
-        return SharedTcbotSequenceFactory.Attributes;
+        return SharedTrotSequenceFactory.Attributes;
     }
 
     public async load(
@@ -30,8 +30,8 @@ export class SharedTcbotSequenceFactory implements IChannelFactory {
         return sequence;
     }
 
-    public create(runtime: IFluidDataStoreRuntime, id: string): SharedTcbotSequence {
-        return new SharedTcbotSequence(id, runtime, SharedTcbotSequenceFactory.Attributes);
+    public create(runtime: IFluidDataStoreRuntime, id: string): SharedTrotSequence {
+        return new SharedTrotSequence(id, runtime, SharedTrotSequenceFactory.Attributes);
     }
 
 }
