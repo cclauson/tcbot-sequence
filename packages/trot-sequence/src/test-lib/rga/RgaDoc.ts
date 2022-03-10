@@ -9,11 +9,20 @@ export interface EffectSequenceElement<TSequenceElement, TSequenceElementOrder> 
 
 export class RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> implements InternalDocument<TSequenceElement, RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, RgaOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, TSequenceElementOrder> {
     constructor(
-        private readonly effectSequence: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[],
-        private readonly deleted: Set<TSequenceElementIdentity>,
+        private effectSequence: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[],
+        private deleted: Set<TSequenceElementIdentity>,
         private readonly sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
         private readonly sequenceElementOrderCompFn: (o1: TSequenceElementOrder, o2: TSequenceElementOrder) => number
     ) {}
+
+    public clone(): RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> {
+        return new RgaDoc(
+            [...this.effectSequence],
+            new Set<TSequenceElementIdentity>(this.deleted),
+            this.sequenceElementType,
+            this.sequenceElementOrderCompFn
+        )
+    }
 
     public read(): TSequenceElement[] {
         return this.getNonTombstoneEffectSequence().map(effectSequenceElement => effectSequenceElement.sequenceElement);
@@ -24,24 +33,30 @@ export class RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElement
             (effectSequenceElement) => !this.deleted.has(this.sequenceElementType.identityForSequenceElementFunc(effectSequenceElement.sequenceElement)));
     }
 
+    private mergeEffectSequence(effectSequence1: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[], effectSequence2: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[]): EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[] {
+        return mergeEffectSequence(
+            effectSequence1,
+            effectSequence2,
+            (sequenceElement1: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>, sequenceElement2: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>) => {
+                return this.sequenceElementType.identityForSequenceElementFunc(sequenceElement1.sequenceElement) === this.sequenceElementType.identityForSequenceElementFunc(sequenceElement2.sequenceElement);
+            },
+            (sequenceElement1: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>, sequenceElement2: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>) => {
+                const ordering = this.sequenceElementOrderCompFn(sequenceElement1.order, sequenceElement2.order);
+                if (ordering === 0) {
+                    throw new Error('unexpectedly comparing two distict sequence elements with same order');
+                }
+                // reverse--we want content that comes causally later to come earlier in sequence
+                // NOTE: This is entirely a convention, but we choose this one to be consistent with standard RGA
+                return -ordering;
+            }
+        );
+    }
+
+    // returns completely new rga doc
+    // TODO: in place mutation semantics?
     public merge(other: RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>) {
         return new RgaDoc(
-            mergeEffectSequence(
-                this.effectSequence,
-                other.effectSequence,
-                (sequenceElement1: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>, sequenceElement2: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>) => {
-                    return this.sequenceElementType.identityForSequenceElementFunc(sequenceElement1.sequenceElement) === this.sequenceElementType.identityForSequenceElementFunc(sequenceElement2.sequenceElement);
-                },
-                (sequenceElement1: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>, sequenceElement2: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>) => {
-                    const ordering = this.sequenceElementOrderCompFn(sequenceElement1.order, sequenceElement2.order);
-                    if (ordering === 0) {
-                        throw new Error('unexpectedly comparing two distict sequence elements with same order');
-                    }
-                    // reverse--we want content that comes causally later to come earlier in sequence
-                    // NOTE: This is entirely a convention, but we choose this one to be consistent with standard RGA
-                    return -ordering;
-                }
-            ),
+            this.mergeEffectSequence(this.effectSequence, other.effectSequence),
             new Set([...this.deleted, ...other.deleted]),
             this.sequenceElementType,
             this.sequenceElementOrderCompFn
@@ -76,11 +91,21 @@ export class RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElement
         return otherDeletedCopy.size === 0;
     }
 
-    public applyOpWithOrder(mergableOp: MergableOpRequest<RgaOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>>, order: TSequenceElementOrder): RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> {
+    public applyOpWithOrder(mergableOp: MergableOpRequest<RgaOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>>, order: TSequenceElementOrder): void {
         const operation = mergableOp.op;
-        return operation.type === 'insertion'
-            ? this.merge(operation.document)
-            : this.merge(new RgaDoc([], operation.deleted, this.sequenceElementType, this.sequenceElementOrderCompFn));
+        if (operation.type === 'insertion') {
+            const effectSequenceNew = this.mergeEffectSequence(operation.document.effectSequence, this.effectSequence);
+            this.effectSequence = effectSequenceNew;
+        } else {
+            const deletedNew = new Set<TSequenceElementIdentity>();
+            operation.deleted.forEach((deletedItem) => {
+                deletedNew.add(deletedItem);
+            });
+            this.deleted.forEach((deletedItem) => {
+                deletedNew.add(deletedItem);
+            });
+            this.deleted = deletedNew;
+        }
     }
 
     // used for testing

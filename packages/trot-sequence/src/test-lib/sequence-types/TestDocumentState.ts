@@ -34,8 +34,9 @@ export class TestDocumentState<TSequenceElement, TOperation, TDocument extends I
             throw new Error('invalid order, already present');
         }
         operationsNew.set(order, mergableOp);
-        const newDocumentState = this.documentState.applyOpWithOrder(mergableOp, order);
-        return new TestDocumentState(newDocumentState, operationsNew, this.implementation);
+        const newDocumentState = this.documentState.clone();
+        newDocumentState.applyOpWithOrder(mergableOp, order);
+        return new TestDocumentState<TSequenceElement, TOperation, TDocument>(newDocumentState, operationsNew, this.implementation);
     }
 
     public read(): TSequenceElement[] {
@@ -46,8 +47,7 @@ export class TestDocumentState<TSequenceElement, TOperation, TDocument extends I
         document: TDocument,
         operations: Map<number, MergableOpRequest<TOperation>>,
         operationsAlreadyInDoc: Map<number, MergableOpRequest<TOperation>>
-    ): TDocument {
-        let documentAcc = document;
+    ): void {
         [...operations.keys()].sort((a, b) => a - b).forEach((order) => {
             const operation = operations.get(order);
             if (!operation) {
@@ -58,15 +58,16 @@ export class TestDocumentState<TSequenceElement, TOperation, TDocument extends I
                     throw new Error('failed during merge, order maps to different operations in two document states');
                 }
             } else {
-                documentAcc = documentAcc.applyOpWithOrder(operation, order);
+                document.applyOpWithOrder(operation, order);
             }
         });
-        return documentAcc;
     }
 
     public mergeWith(other: TestDocumentState<TSequenceElement, TOperation, TDocument>): TestDocumentState<TSequenceElement, TOperation, TDocument> {
-        const thisDocUpdated = this.updateDocumentWithOperationsNotIn(this.documentState, other.operations, this.operations);
-        const otherDocUpdated = this.updateDocumentWithOperationsNotIn(other.documentState, this.operations, other.operations);
+        const thisDocUpdated = this.documentState.clone();
+        const otherDocUpdated = other.documentState.clone();
+        this.updateDocumentWithOperationsNotIn(thisDocUpdated, other.operations, this.operations);
+        this.updateDocumentWithOperationsNotIn(otherDocUpdated, this.operations, other.operations);
         if (!thisDocUpdated.equals(otherDocUpdated)) {
             throw new Error('Convergence failure detected, documents at different sites are not equal');
         }
