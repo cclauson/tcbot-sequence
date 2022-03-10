@@ -1,7 +1,7 @@
 import { Random } from "../test-lib/random/Random";
 import { charSequence } from "../test-lib/sequence-types/CharSequence";
 import { InternalDocument, SequenceElementType, SequenceTypeImplementation } from "../test-lib/sequence-types/CoreTypes";
-import { RgaCvrdt } from "../test-lib/rga-cvrdt/RgaCvrdt";
+import { Rga } from "../test-lib/rga-cvrdt/Rga";
 import { CharGenerator } from "./CharGenerator";
 import { generateOpsAndTest, SequenceElementGenerator } from "./GenerateOpsAndTest";
 
@@ -9,7 +9,7 @@ function compareNumbers(n1: number, n2: number): number {
     return n1 - n2;
 }
 
-runIterated(charSequence, () => new CharGenerator(), new RgaCvrdt(charSequence, compareNumbers), 10000);
+runIterated(charSequence, () => new CharGenerator(), new Rga(charSequence, compareNumbers), 10000);
 
 function runIterated<TInternalDocument extends InternalDocument<TSequenceElement, TInternalDocument, TOperation, number>, TOperation, TSequenceElement, TSequenceElementIdentity>(
     sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,

@@ -1,22 +1,22 @@
-import { EffectSequenceElement, RgaCvrdtDoc } from "./RgaCvrdtDoc";
-import { MergableOpRequest, SequenceElementType, SequenceTypeImplementation, UserOperation } from "../sequence-types/CoreTypes";
+import { EffectSequenceElement, RgaDoc } from "./RgaDoc";
+import { SequenceElementType, SequenceTypeImplementation, UserOperation } from "../sequence-types/CoreTypes";
 
-interface RgaCvrdtInsertionOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
+interface RgaInsertionOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
     type: 'insertion',
-    document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>,
+    document: RgaDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>,
     inserted: Set<TSequenceElementIdentity>
 }
 
-interface RgaCvrdtDeletionOp<TSequenceElementIdentity> {
+interface RgaDeletionOp<TSequenceElementIdentity> {
     type: 'deletion',
     deleted: Set<TSequenceElementIdentity>
 }
 
-export type RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> = RgaCvrdtInsertionOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder>
-    | RgaCvrdtDeletionOp<TSequenceElementIdentity>;
+export type RgaOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> = RgaInsertionOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder>
+    | RgaDeletionOp<TSequenceElementIdentity>;
 
-export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity, TOperationOrder> implements
-    SequenceTypeImplementation<TSequenceElement, RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder>, TOperationOrder, RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>> {
+export class Rga<TSequenceElement, TSequenceElementIdentity, TOperationOrder> implements
+    SequenceTypeImplementation<TSequenceElement, RgaOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder>, TOperationOrder, RgaDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>> {
 
     public constructor(
         private readonly sequenceElementType: SequenceElementType<TSequenceElement, TSequenceElementIdentity>,
@@ -24,15 +24,15 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity, TOperationOrde
         this.sequenceElementType = sequenceElementType;
     }
 
-    public emptyDocument(): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
-        return new RgaCvrdtDoc([] as EffectSequenceElement<TSequenceElement, TOperationOrder>[], new Set<TSequenceElementIdentity>(), this.sequenceElementType, this.sequenceElementOrderCompFn);
+    public emptyDocument(): RgaDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
+        return new RgaDoc([] as EffectSequenceElement<TSequenceElement, TOperationOrder>[], new Set<TSequenceElementIdentity>(), this.sequenceElementType, this.sequenceElementOrderCompFn);
     };
     
-    public documentReadFunc(document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>): TSequenceElement[] {
+    public documentReadFunc(document: RgaDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>): TSequenceElement[] {
         return document.read();
     }
 
-    public operationFromUserOpAppliedToDoc(userOperation: UserOperation<TSequenceElement>, document: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>, order: TOperationOrder): RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
+    public operationFromUserOpAppliedToDoc(userOperation: UserOperation<TSequenceElement>, document: RgaDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder>, order: TOperationOrder): RgaOp<TSequenceElement, TSequenceElementIdentity, TOperationOrder> {
         const nonTombstoneEffectSequence = document.getNonTombstoneEffectSequence();
         if (userOperation.type === 'insertion') {
             const effectSequence: EffectSequenceElement<TSequenceElement, TOperationOrder>[] = [];
@@ -43,17 +43,16 @@ export class RgaCvrdt<TSequenceElement, TSequenceElementIdentity, TOperationOrde
             if (userOperation.index !== nonTombstoneEffectSequence.length) {
                 effectSequence.push(nonTombstoneEffectSequence[userOperation.index]);
             }
-            const insertionDoc: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder> = new RgaCvrdtDoc(
+            const insertionDoc: RgaDoc<TSequenceElement, TSequenceElementIdentity, TOperationOrder> = new RgaDoc(
                 effectSequence,
                 new Set<TSequenceElementIdentity>(),
                 this.sequenceElementType,
                 this.sequenceElementOrderCompFn
             );
             const insertedIdentities = new Set<TSequenceElementIdentity>(userOperation.content.map(this.sequenceElementType.identityForSequenceElementFunc));
-            const mergedDoc = document.merge(insertionDoc);
             return {
                 type: 'insertion',
-                document: mergedDoc,
+                document: insertionDoc,
                 inserted: insertedIdentities
             };
         } else {

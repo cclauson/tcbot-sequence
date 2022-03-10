@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { charSequence } from '../../sequence-types/CharSequence';
-import { EffectSequenceElement, RgaCvrdtDoc } from '../RgaCvrdtDoc';
+import { EffectSequenceElement, RgaDoc } from '../RgaDoc';
 
 function compareNumbers(n1: number, n2: number): number {
     return n1 - n2;
@@ -15,9 +15,9 @@ function charSequenceWithOrder(chars: string, order: number): EffectSequenceElem
      });
 }
 
-describe('RgaCvrdt doc', () => {
+describe('Rga doc', () => {
     it('read document with no deleted content', () => {
-        const document = new RgaCvrdtDoc<string, string, number>(
+        const document = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>(),
             charSequence,
@@ -28,7 +28,7 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('read document with all deleted content', () => {
-        const document = new RgaCvrdtDoc<string, string, number>(
+        const document = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>(['a', 'b', 'c']),
             charSequence,
@@ -39,7 +39,7 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('read document with some deleted content', () => {
-        const document = new RgaCvrdtDoc<string, string, number>(
+        const document = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>(['b']),
             charSequence,
@@ -50,13 +50,13 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('merge disjoint document states results as expected', () => {
-        const document1 = new RgaCvrdtDoc<string, string, number>(
+        const document1 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 1),
             new Set<string>(['b']),
             charSequence,
             compareNumbers
         );
-        const document2 = new RgaCvrdtDoc<string, string, number>(
+        const document2 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('xyz', 0),
             new Set<string>(['x', 'z']),
             charSequence,
@@ -70,7 +70,7 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('merge identical document states is idempotent', () => {
-        const document = new RgaCvrdtDoc<string, string, number>(
+        const document = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>(['b']),
             charSequence,
@@ -83,7 +83,7 @@ describe('RgaCvrdt doc', () => {
 
     it('merge false tie states is as expected', () => {
         const abcSequence = charSequenceWithOrder('abc', 0);
-        const document1 = new RgaCvrdtDoc<string, string, number>(
+        const document1 = new RgaDoc<string, string, number>(
             abcSequence,
             new Set<string>(['b']),
             charSequence,
@@ -91,7 +91,7 @@ describe('RgaCvrdt doc', () => {
         );
         const sequenceWithX = [...abcSequence];
         sequenceWithX.splice(1, 0, ...charSequenceWithOrder('x', 1));
-        const document2 = new RgaCvrdtDoc<string, string, number>(
+        const document2 = new RgaDoc<string, string, number>(
             sequenceWithX,
             new Set<string>(),
             charSequence,
@@ -99,7 +99,7 @@ describe('RgaCvrdt doc', () => {
         );
         const sequenceWithY = [...abcSequence];
         sequenceWithY.splice(2, 0, ...charSequenceWithOrder('y', 2));
-        const document3 = new RgaCvrdtDoc<string, string, number>(
+        const document3 = new RgaDoc<string, string, number>(
             sequenceWithY,
             new Set<string>(),
             charSequence,
@@ -111,13 +111,13 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('empty documents are equal', () => {
-        const document1 = new RgaCvrdtDoc<string, string, number>(
+        const document1 = new RgaDoc<string, string, number>(
             [],
             new Set<string>(),
             charSequence,
             compareNumbers
         );
-        const document2 = new RgaCvrdtDoc<string, string, number>(
+        const document2 = new RgaDoc<string, string, number>(
             [],
             new Set<string>(),
             charSequence,
@@ -127,13 +127,13 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('empty document not equal to non-empty document', () => {
-        const document1 = new RgaCvrdtDoc<string, string, number>(
+        const document1 = new RgaDoc<string, string, number>(
             [],
             new Set<string>(),
             charSequence,
             compareNumbers
         );
-        const document2 = new RgaCvrdtDoc<string, string, number>(
+        const document2 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('a', 0),
             new Set<string>(),
             charSequence,
@@ -144,13 +144,13 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('simple, 3 letter documents equal', () => {
-        const document1 = new RgaCvrdtDoc<string, string, number>(
+        const document1 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>(),
             charSequence,
             compareNumbers
         );
-        const document2 = new RgaCvrdtDoc<string, string, number>(
+        const document2 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>(),
             charSequence,
@@ -161,13 +161,13 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('deletion of content causes documents to be non equal', () => {
-        const document1 = new RgaCvrdtDoc<string, string, number>(
+        const document1 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>(),
             charSequence,
             compareNumbers
         );
-        const document2 = new RgaCvrdtDoc<string, string, number>(
+        const document2 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>('b'),
             charSequence,
@@ -178,13 +178,13 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('documents with different deleted content non equal', () => {
-        const document1 = new RgaCvrdtDoc<string, string, number>(
+        const document1 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>('b'),
             charSequence,
             compareNumbers
         );
-        const document2 = new RgaCvrdtDoc<string, string, number>(
+        const document2 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>('c'),
             charSequence,
@@ -195,13 +195,13 @@ describe('RgaCvrdt doc', () => {
     });
 
     it('documents with the same deleted content equal', () => {
-        const document1 = new RgaCvrdtDoc<string, string, number>(
+        const document1 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>('b'),
             charSequence,
             compareNumbers
         );
-        const document2 = new RgaCvrdtDoc<string, string, number>(
+        const document2 = new RgaDoc<string, string, number>(
             charSequenceWithOrder('abc', 0),
             new Set<string>('b'),
             charSequence,

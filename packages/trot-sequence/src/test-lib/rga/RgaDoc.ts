@@ -1,13 +1,13 @@
 import { InternalDocument, MergableOpRequest, SequenceElementType } from "../sequence-types/CoreTypes";
 import { mergeEffectSequence } from "./MergeEffectSequence";
-import { RgaCvrdtOp } from "./RgaCvrdt";
+import { RgaOp } from "./Rga";
 
 export interface EffectSequenceElement<TSequenceElement, TSequenceElementOrder> {
     sequenceElement: TSequenceElement,
     order: TSequenceElementOrder
 }
 
-export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> implements InternalDocument<TSequenceElement, RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, TSequenceElementOrder> {
+export class RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> implements InternalDocument<TSequenceElement, RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, RgaOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>, TSequenceElementOrder> {
     constructor(
         private readonly effectSequence: EffectSequenceElement<TSequenceElement, TSequenceElementOrder>[],
         private readonly deleted: Set<TSequenceElementIdentity>,
@@ -24,8 +24,8 @@ export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceEl
             (effectSequenceElement) => !this.deleted.has(this.sequenceElementType.identityForSequenceElementFunc(effectSequenceElement.sequenceElement)));
     }
 
-    public merge(other: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>) {
-        return new RgaCvrdtDoc(
+    public merge(other: RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>) {
+        return new RgaDoc(
             mergeEffectSequence(
                 this.effectSequence,
                 other.effectSequence,
@@ -48,7 +48,7 @@ export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceEl
         );
     }
 
-    public equals(other: RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>): boolean {
+    public equals(other: RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>): boolean {
         if (this.effectSequence.length !== other.effectSequence.length) {
             return false;
         }
@@ -76,11 +76,11 @@ export class RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceEl
         return otherDeletedCopy.size === 0;
     }
 
-    public applyOpWithOrder(mergableOp: MergableOpRequest<RgaCvrdtOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>>, order: TSequenceElementOrder): RgaCvrdtDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> {
+    public applyOpWithOrder(mergableOp: MergableOpRequest<RgaOp<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder>>, order: TSequenceElementOrder): RgaDoc<TSequenceElement, TSequenceElementIdentity, TSequenceElementOrder> {
         const operation = mergableOp.op;
         return operation.type === 'insertion'
             ? this.merge(operation.document)
-            : this.merge(new RgaCvrdtDoc([], operation.deleted, this.sequenceElementType, this.sequenceElementOrderCompFn));
+            : this.merge(new RgaDoc([], operation.deleted, this.sequenceElementType, this.sequenceElementOrderCompFn));
     }
 
     // used for testing
